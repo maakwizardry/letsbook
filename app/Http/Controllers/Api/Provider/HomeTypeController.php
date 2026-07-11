@@ -11,7 +11,7 @@ class HomeTypeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate(['label' => 'required|string|max:255']);
-        $validated['provider_id'] = $request->user()->provider_id;
+        $validated['provider_id'] = $request->user()->id;
         
         $homeType = HomeType::create($validated);
         return response()->json($homeType, 201);
@@ -19,7 +19,7 @@ class HomeTypeController extends Controller
 
     public function update(Request $request, $id)
     {
-        $homeType = HomeType::where('provider_id', $request->user()->provider_id)->findOrFail($id);
+        $homeType = HomeType::where('provider_id', $request->user()->id)->findOrFail($id);
         $validated = $request->validate(['label' => 'required|string|max:255']);
         $homeType->update($validated);
         return response()->json($homeType);
@@ -27,7 +27,7 @@ class HomeTypeController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $homeType = HomeType::where('provider_id', $request->user()->provider_id)->findOrFail($id);
+        $homeType = HomeType::where('provider_id', $request->user()->id)->findOrFail($id);
         $homeType->delete();
         return response()->json(null, 204);
     }

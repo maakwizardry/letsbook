@@ -1,15 +1,8 @@
 
    WARN  Unable to respect the `PHP_CLI_SERVER_WORKERS` environment variable without the `--no-reload` flag. Only creating a single server.  
 
-   INFO  Server running on [http://127.0.0.1:8087].  
+   INFO  Server running on [http://127.0.0.1:8000].  
 
   Press Ctrl+C to stop the server
 
-  2026-07-09 23:43:04 /api/home-types ............................ ~ 505.17ms
-  2026-07-09 23:43:04 /api/service-items ........................... ~ 0.02ms
-  2026-07-09 23:43:04 /api/bookings ................................ ~ 0.01ms
-  2026-07-09 23:43:04 /api/bookings ................................ ~ 0.01ms
-  2026-07-09 23:43:04 /api/bookings ................................ ~ 0.01ms
-  2026-07-09 23:43:04 /sanctum/csrf-cookie ......................... ~ 0.01ms
-  2026-07-09 23:43:04 /login ..................................... ~ 204.40ms
-  2026-07-09 23:43:05 /dashboard ................................... ~ 0.02ms
+  2026-07-11 01:11:16 /provider/demo-cleaning-service ............. ~ 13.69ms

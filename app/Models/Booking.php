@@ -13,6 +13,7 @@ class Booking extends Model
         'provider_id', 
         'customer_id', 
         'home_type_id', 
+        'reference_id',
         'total_quote', 
         'status', 
         'notes',

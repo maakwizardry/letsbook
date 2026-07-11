@@ -11,6 +11,7 @@ use App\Models\ServiceItem;
 use App\Notifications\BookingConfirmationNotification;
 use App\Notifications\NewBookingNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
@@ -73,6 +74,7 @@ class BookingController extends Controller
             'provider_id' => $providerId,
             'customer_id' => $customer->id,
             'home_type_id' => $validated['home_type_id'],
+            'reference_id' => 'BKG-' . strtoupper(Str::random(6)),
             'total_quote' => $total,
             'notes' => $validated['notes'] ?? null,
             'scheduled_at' => $scheduledAt,
@@ -89,10 +91,8 @@ class BookingController extends Controller
         $booking->load('items.serviceItem', 'customer', 'homeType', 'provider');
 
         // Notifying provider and customer
-        if ($booking->provider && $booking->provider->contact_info) {
-            foreach ($booking->provider->users as $user) {
-                $user->notify(new NewBookingNotification($booking));
-            }
+        if ($booking->provider && $booking->provider->email) {
+            $booking->provider->notify(new NewBookingNotification($booking));
         }
 
         if ($customer->email) {

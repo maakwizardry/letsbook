@@ -18,10 +18,10 @@ class ServiceItemController extends Controller
         ]);
         
         if (!empty($validated['home_type_id'])) {
-            $request->user()->provider->homeTypes()->findOrFail($validated['home_type_id']);
+            $request->user()->homeTypes()->findOrFail($validated['home_type_id']);
         }
         
-        $validated['provider_id'] = $request->user()->provider_id;
+        $validated['provider_id'] = $request->user()->id;
         
         $serviceItem = ServiceItem::create($validated);
         return response()->json($serviceItem, 201);
@@ -29,7 +29,7 @@ class ServiceItemController extends Controller
 
     public function update(Request $request, $id)
     {
-        $serviceItem = ServiceItem::where('provider_id', $request->user()->provider_id)->findOrFail($id);
+        $serviceItem = ServiceItem::where('provider_id', $request->user()->id)->findOrFail($id);
         
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -39,7 +39,7 @@ class ServiceItemController extends Controller
         ]);
         
         if (array_key_exists('home_type_id', $validated) && !empty($validated['home_type_id'])) {
-            $request->user()->provider->homeTypes()->findOrFail($validated['home_type_id']);
+            $request->user()->homeTypes()->findOrFail($validated['home_type_id']);
         }
 
         $serviceItem->update($validated);
@@ -48,7 +48,7 @@ class ServiceItemController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $serviceItem = ServiceItem::where('provider_id', $request->user()->provider_id)->findOrFail($id);
+        $serviceItem = ServiceItem::where('provider_id', $request->user()->id)->findOrFail($id);
         $serviceItem->delete();
         return response()->json(null, 204);
     }

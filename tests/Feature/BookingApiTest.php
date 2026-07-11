@@ -10,15 +10,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->provider = Provider::create([
+    $this->provider = Provider::factory()->create([
         'name' => 'Test Cleaning Service',
         'contact_info' => 'contact@test.com',
         'slug' => 'test-cleaning-service'
     ]);
     
-    $this->user = User::factory()->create([
-        'provider_id' => $this->provider->id,
-    ]);
+
     
     $this->homeType = HomeType::create([
         'provider_id' => $this->provider->id,
@@ -93,7 +91,7 @@ test('provider can fetch their bookings', function () {
         'scheduled_at' => '2026-08-01 14:00:00'
     ]);
 
-    $response = $this->actingAs($this->user)->getJson('/api/provider/bookings');
+    $response = $this->actingAs($this->provider)->getJson('/api/provider/bookings');
     $response->assertStatus(200)
              ->assertJsonCount(1);
 });
@@ -109,7 +107,7 @@ test('provider can update a booking status', function () {
     
     $bookingId = $response->json('booking.id');
     
-    $updateResponse = $this->actingAs($this->user)->patchJson("/api/provider/bookings/{$bookingId}", [
+    $updateResponse = $this->actingAs($this->provider)->patchJson("/api/provider/bookings/{$bookingId}", [
         'status' => 'Scheduled'
     ]);
     
@@ -155,7 +153,7 @@ test('cancelled bookings free up the slot', function () {
     $bookingId = $bookingResponse->json('booking.id');
     
     // Cancel the booking
-    $this->actingAs($this->user)->patchJson("/api/provider/bookings/{$bookingId}", [
+    $this->actingAs($this->provider)->patchJson("/api/provider/bookings/{$bookingId}", [
         'status' => 'Cancelled'
     ]);
     
@@ -184,7 +182,7 @@ test('public endpoint returns booked slots and ignores cancelled ones', function
     ]);
     $cancelledId = $cancelledResponse->json('booking.id');
     
-    $this->actingAs($this->user)->patchJson("/api/provider/bookings/{$cancelledId}", [
+    $this->actingAs($this->provider)->patchJson("/api/provider/bookings/{$cancelledId}", [
         'status' => 'Cancelled'
     ]);
     

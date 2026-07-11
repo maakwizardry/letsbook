@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\HomeType;
 use App\Models\Provider;
 use App\Models\ServiceItem;
-use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -21,15 +20,9 @@ class DatabaseSeeder extends Seeder
         $provider = Provider::create([
             'name' => 'Demo Cleaning Service',
             'contact_info' => 'contact@democleaning.com',
-            'slug' => 'demo-cleaning-service',
-        ]);
-
-        // Create a Provider User
-        User::create([
-            'name' => 'Admin User',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
-            'provider_id' => $provider->id,
+            'slug' => 'demo-cleaning-service',
         ]);
 
         // Create Home Types

@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('provider_id')->nullable()->constrained('providers')->nullOnDelete();
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->string('reference_id')->unique()->nullable()->after('id');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            //
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->dropColumn('reference_id');
         });
     }
 };

@@ -10,7 +10,7 @@ class BookingController extends Controller
 {
     public function index(Request $request)
     {
-        $providerId = $request->user()->provider_id;
+        $providerId = $request->user()->id;
         $query = Booking::with('customer', 'homeType')->where('provider_id', $providerId)->orderByDesc('created_at');
         
         if ($request->has('status')) {
@@ -22,7 +22,7 @@ class BookingController extends Controller
 
     public function show(Request $request, $id)
     {
-        $providerId = $request->user()->provider_id;
+        $providerId = $request->user()->id;
         $booking = Booking::with('customer', 'homeType', 'items.serviceItem')
             ->where('provider_id', $providerId)
             ->findOrFail($id);
@@ -32,7 +32,7 @@ class BookingController extends Controller
 
     public function update(Request $request, $id)
     {
-        $providerId = $request->user()->provider_id;
+        $providerId = $request->user()->id;
         $booking = Booking::where('provider_id', $providerId)->findOrFail($id);
         
         $validated = $request->validate([
