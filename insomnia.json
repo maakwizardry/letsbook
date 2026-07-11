@@ -1,0 +1,323 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-07-10T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.2.0",
+  "resources": [
+    {
+      "_id": "wrk_1",
+      "parentId": null,
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "name": "Cleaning Service API",
+      "description": "",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_1",
+      "parentId": "wrk_1",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000"
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1690000000000,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_public",
+      "parentId": "wrk_1",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "name": "Public Endpoints",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1690000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_provider",
+      "parentId": "wrk_1",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "name": "Provider Endpoints",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1690000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_1",
+      "parentId": "fld_public",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/home-types",
+      "name": "Get Home Types",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_2",
+      "parentId": "fld_public",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/service-items",
+      "name": "Get Service Items",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "home_type_id",
+          "value": "1"
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_3",
+      "parentId": "fld_public",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/quote",
+      "name": "Calculate Quote",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"home_type_id\": 1,\n  \"service_item_ids\": [1, 2]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_4",
+      "parentId": "fld_public",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/bookings",
+      "name": "Submit Booking",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"home_type_id\": 1,\n  \"service_item_ids\": [1, 2],\n  \"customer_name\": \"John Doe\",\n  \"customer_email\": \"john@example.com\",\n  \"customer_phone\": \"555-0101\",\n  \"notes\": \"Test booking\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_5",
+      "parentId": "fld_provider",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/sanctum/csrf-cookie",
+      "name": "Get CSRF Cookie",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_6",
+      "parentId": "fld_provider",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/login",
+      "name": "Provider Login",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_7",
+      "parentId": "fld_provider",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/provider/bookings",
+      "name": "Get Bookings",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_8",
+      "parentId": "fld_provider",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/provider/bookings/1",
+      "name": "Get Single Booking",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_9",
+      "parentId": "fld_provider",
+      "modified": 1690000000000,
+      "created": 1690000000000,
+      "url": "{{ _.base_url }}/api/provider/bookings/1",
+      "name": "Update Booking Status",
+      "description": "",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"Scheduled\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1690000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}

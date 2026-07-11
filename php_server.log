@@ -1,0 +1,25 @@
+[Thu Jul  9 23:41:52 2026] PHP 8.2.27 Development Server (http://localhost:8085) started
+[Thu Jul  9 23:41:54 2026] [::1]:61023 Accepted
+[Thu Jul  9 23:41:54 2026] [::1]:61023 [200]: GET /api/home-types
+[Thu Jul  9 23:41:54 2026] [::1]:61023 Closing
+[Thu Jul  9 23:41:54 2026] [::1]:61025 Accepted
+[Thu Jul  9 23:41:54 2026] [::1]:61025 [200]: GET /api/service-items?home_type_id=1
+[Thu Jul  9 23:41:54 2026] [::1]:61025 Closing
+[Thu Jul  9 23:41:54 2026] [::1]:61027 Accepted
+[Thu Jul  9 23:41:55 2026] [::1]:61027 [201]: POST /api/bookings
+[Thu Jul  9 23:41:55 2026] [::1]:61027 Closing
+[Thu Jul  9 23:41:55 2026] [::1]:61029 Accepted
+[Thu Jul  9 23:41:55 2026] [::1]:61029 [201]: POST /api/bookings
+[Thu Jul  9 23:41:55 2026] [::1]:61029 Closing
+[Thu Jul  9 23:41:55 2026] [::1]:61031 Accepted
+[Thu Jul  9 23:41:55 2026] [::1]:61031 [201]: POST /api/bookings
+[Thu Jul  9 23:41:55 2026] [::1]:61031 Closing
+[Thu Jul  9 23:41:55 2026] [::1]:61033 Accepted
+[Thu Jul  9 23:41:55 2026] [::1]:61033 [204]: GET /sanctum/csrf-cookie
+[Thu Jul  9 23:41:55 2026] [::1]:61033 Closing
+[Thu Jul  9 23:41:55 2026] [::1]:61035 Accepted
+[Thu Jul  9 23:41:55 2026] [::1]:61035 [302]: POST /login
+[Thu Jul  9 23:41:55 2026] [::1]:61035 Closing
+[Thu Jul  9 23:41:55 2026] [::1]:61037 Accepted
+[Thu Jul  9 23:41:55 2026] [::1]:61037 [500]: GET /dashboard
+[Thu Jul  9 23:41:55 2026] [::1]:61037 Closing
