@@ -17,6 +17,7 @@ class BookingWizardController extends Controller
                 'id' => $provider->id,
                 'name' => $provider->name,
                 'slug' => $provider->slug,
+                'etransfer_email' => $provider->etransfer_email,
             ]
         ]);
     }

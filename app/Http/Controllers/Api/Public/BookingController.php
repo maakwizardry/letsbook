@@ -27,6 +27,7 @@ class BookingController extends Controller
             'customer_address' => 'nullable|string',
             'notes' => 'nullable|string',
             'scheduled_at' => 'required|date',
+            'payment_method' => 'required|in:cash,etransfer',
         ]);
 
         $homeType = HomeType::findOrFail($validated['home_type_id']);
@@ -76,6 +77,7 @@ class BookingController extends Controller
             'home_type_id' => $validated['home_type_id'],
             'reference_id' => 'BKG-' . strtoupper(Str::random(6)),
             'total_quote' => $total,
+            'payment_method' => $validated['payment_method'],
             'notes' => $validated['notes'] ?? null,
             'scheduled_at' => $scheduledAt,
         ]);

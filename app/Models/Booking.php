@@ -14,8 +14,9 @@ class Booking extends Model
         'customer_id', 
         'home_type_id', 
         'reference_id',
-        'total_quote', 
-        'status', 
+        'total_quote',
+        'payment_method',
+        'status',
         'notes',
         'scheduled_at'
     ];

@@ -14,6 +14,7 @@ class Provider extends Authenticatable
     protected $fillable = [
         'name',
         'contact_info',
+        'etransfer_email',
         'slug',
         'email',
         'password',

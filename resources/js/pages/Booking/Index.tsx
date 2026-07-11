@@ -14,7 +14,9 @@ import {
  Mail,
  Phone,
  Info,
- CheckCircle2
+ CheckCircle2,
+ Banknote,
+ Landmark
 } from 'lucide-react';
 
 export default function BookingWizard({ provider }: { provider: any }) {
@@ -32,6 +34,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  const [selectedDate, setSelectedDate] = useState<string>('');
  const [selectedTime, setSelectedTime] = useState<string>('');
  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', notes: '' });
+ const [paymentMethod, setPaymentMethod] = useState<'cash' | 'etransfer' | ''>('');
  
  // UI states
  const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,7 +121,8 @@ export default function BookingWizard({ provider }: { provider: any }) {
  customer_name: customer.name,
  customer_email: customer.email,
  customer_phone: customer.phone,
- notes: customer.notes
+ notes: customer.notes,
+ payment_method: paymentMethod
  })
  });
 
@@ -160,7 +164,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  const timeString = `${hourStr}:00`;
  const isBooked = bookedSlots.some(isoStr => {
  const bookedDate = new Date(isoStr);
- return bookedDate.getHours() === i;
+ return bookedDate.getUTCHours() === i;
  });
  const period = i < 12 ? 'Morning' : (i < 16 ? 'Afternoon' : 'Evening');
  const formatted = i > 12 ? `${i-12}:00 PM` : (i === 12 ? '12:00 PM' : `${i}:00 AM`);
@@ -222,7 +226,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {step === 1 && (
  <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-300">
  <div className="mb-6">
- <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Welcome to {provider.name}</h2>
+ <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Hi, {provider.name}</h2>
  <p className="text-gray-500 text-sm">What kind of property needs cleaning?</p>
  </div>
  <div className="space-y-4">
@@ -471,6 +475,36 @@ export default function BookingWizard({ provider }: { provider: any }) {
  ></textarea>
  </div>
 
+ <div>
+ <h3 className="text-sm font-bold text-gray-900 mb-3">How are you paying?</h3>
+ <div className="grid grid-cols-2 gap-3">
+ <button
+ type="button"
+ onClick={() => setPaymentMethod('cash')}
+ className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 ${
+ paymentMethod === 'cash'
+ ? 'border-primary bg-primary/5 text-primary shadow-sm'
+ : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ }`}
+ >
+ <Banknote className="w-6 h-6"/>
+ Cash
+ </button>
+ <button
+ type="button"
+ onClick={() => setPaymentMethod('etransfer')}
+ className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 ${
+ paymentMethod === 'etransfer'
+ ? 'border-primary bg-primary/5 text-primary shadow-sm'
+ : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ }`}
+ >
+ <Landmark className="w-6 h-6"/>
+ E-transfer
+ </button>
+ </div>
+ </div>
+
  {error && (
  <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm font-medium flex items-start gap-2 border border-red-100">
  <Info className="w-5 h-5 shrink-0 mt-0.5"/>
@@ -502,6 +536,18 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <span className="font-bold text-gray-900">${bookingResponse?.total_quote}</span>
  </div>
  </div>
+
+ {paymentMethod === 'etransfer' && (
+ <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 w-full mb-8">
+ <div className="flex items-center gap-2 mb-2">
+ <Landmark className="w-5 h-5 text-primary"/>
+ <span className="font-bold text-gray-900">Send your e-transfer to</span>
+ </div>
+ <p className="text-gray-700">
+ {provider.etransfer_email || 'The provider will contact you with e-transfer details.'}
+ </p>
+ </div>
+ )}
 
  <p className="text-gray-500 text-center mb-8 max-w-sm">
  Thank you, <span className="font-semibold text-gray-900">{customer.name}</span>. Your service is scheduled. We've sent details to your email.
@@ -572,7 +618,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <div className="text-xl font-black text-gray-900">${totalQuote}</div>
  </div>
  <button 
- disabled={!customer.name || !customer.phone || isSubmitting}
+ disabled={!customer.name || !customer.phone || !paymentMethod || isSubmitting}
  onClick={submitBooking}
  className="px-8 py-3.5 bg-primary text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-primary/25"
  >
