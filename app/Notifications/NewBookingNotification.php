@@ -26,9 +26,12 @@ class NewBookingNotification extends Notification
     public function toMail($notifiable)
     {
         return (new MailMessage)
-                    ->subject('New Booking Received')
-                    ->line('A new booking has been received from ' . $this->booking->customer->name)
-                    ->line('Total Quote: $' . $this->booking->total_quote)
-                    ->action('View Booking', url('/'));
+                    ->subject('New Booking Received!')
+                    ->greeting('Hello ' . $this->booking->provider->name . ',')
+                    ->line('You got a new booking from ' . $this->booking->customer->name . '.')
+                    ->line('Reference ID: ' . $this->booking->reference_id)
+                    ->line('Scheduled Date: ' . $this->booking->scheduled_at->format('l, F j, Y \a\t g:i A'))
+                    ->line('Total Quote: $' . number_format($this->booking->total_quote, 2))
+                    ->action('View Booking', url('/provider/bookings/' . $this->booking->id));
     }
 }

@@ -26,9 +26,12 @@ class BookingConfirmationNotification extends Notification
     public function toMail($notifiable)
     {
         return (new MailMessage)
-                    ->subject('Your Booking Confirmation')
-                    ->line('Thank you for your booking, ' . $this->booking->customer->name . '!')
-                    ->line('Your estimated quote is $' . $this->booking->total_quote)
-                    ->line('We will contact you shortly to schedule your cleaning.');
+                    ->subject('Your Booking is Confirmed!')
+                    ->greeting('Hello ' . $this->booking->customer->name . ',')
+                    ->line('Your booking has been successfully confirmed.')
+                    ->line('Reference ID: ' . $this->booking->reference_id)
+                    ->line('Scheduled Date: ' . $this->booking->scheduled_at->format('l, F j, Y \a\t g:i A'))
+                    ->line('Total Quote: $' . number_format($this->booking->total_quote, 2))
+                    ->line('We look forward to serving you!');
     }
 }
