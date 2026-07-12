@@ -20,7 +20,10 @@ import {
  Search,
  Building2,
  Pencil,
- BellRing
+ BellRing,
+ Star,
+ Hash,
+ StickyNote
 } from 'lucide-react';
 
 interface SelectedAddress {
@@ -67,6 +70,8 @@ export default function BookingWizard({ provider }: { provider: any }) {
  const [addressError, setAddressError] = useState('');
  const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
  const [unitNumber, setUnitNumber] = useState('');
+ const [buzzCode, setBuzzCode] = useState('');
+ const [buildingInstructions, setBuildingInstructions] = useState('');
 
  // UI states
  const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,12 +113,9 @@ export default function BookingWizard({ provider }: { provider: any }) {
 
  // Initial fetch
  useEffect(() => {
- fetch('/api/home-types')
+ fetch(`/api/home-types?provider_id=${provider.id}`)
  .then(res => res.json())
- .then(data => {
- const providerTypes = data.filter((h: any) => h.provider_id === provider.id);
- setHomeTypes(providerTypes.length ? providerTypes : data);
- });
+ .then(data => setHomeTypes(data));
  }, [provider.id]);
 
  // Fetch services when home type changes
@@ -190,6 +192,8 @@ export default function BookingWizard({ provider }: { provider: any }) {
  payment_method: paymentMethod,
  customer_address: selectedAddress?.displayName,
  unit_number: unitNumber,
+ buzz_code: buzzCode,
+ building_instructions: buildingInstructions,
  postal_code: selectedAddress?.postcode,
  latitude: selectedAddress?.lat,
  longitude: selectedAddress?.lon,
@@ -274,142 +278,261 @@ export default function BookingWizard({ provider }: { provider: any }) {
 
  // GATE: Require a confirmed, map-picked address before the booking wizard is shown
  if (!addressConfirmed) {
+ const brandStyle = provider.brand_color ? ({ '--primary': provider.brand_color } as React.CSSProperties) : undefined;
+ const hasStats = provider.rating || provider.completed_cleanings_count || provider.years_in_business;
+
  return (
- <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-primary/20">
- <Head title={`Your Address | ${provider.name}`} />
+ <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20" style={brandStyle}>
+ <Head title={`Book ${provider.name}`} />
 
- <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
- <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
- <h1 className="text-lg font-bold text-gray-900 truncate">Where should we come?</h1>
+ <main className="flex-1 max-w-2xl mx-auto w-full pb-36">
+ {/* Hero: provider image with business branding on top */}
+ <div className="relative h-[38vh] min-h-[280px] max-h-[400px] w-full overflow-hidden">
+ {provider.cover_image_url ? (
+ <img src={provider.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover"/>
+ ) : (
+ <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/70"/>
+ )}
+ <div className="absolute inset-0 bg-black/60"/>
+
+ <div className="absolute inset-x-0 bottom-0 px-5 pb-10">
+ {provider.logo_url && (
+ <img
+ src={provider.logo_url}
+ alt={`${provider.name} logo`}
+ className="w-14 h-14 rounded-2xl object-cover mb-4 border-2 border-white/70 shadow-lg"
+ />
+ )}
+ <h1 className="text-2xl font-black font-heading text-white mb-1.5">{provider.name}</h1>
+ {provider.tagline && (
+ <p className="text-white/85 font-medium mb-2.5">{provider.tagline}</p>
+ )}
+ {hasStats && (
+ <div className="flex items-center gap-x-2 gap-y-1.5 flex-wrap text-sm text-white/90">
+ {provider.rating && (
+ <span className="flex items-center gap-1 font-semibold text-white">
+ <Star className="w-4 h-4 fill-amber-400 text-amber-400"/>
+ {provider.rating.toFixed(1)}
+ </span>
+ )}
+ {provider.completed_cleanings_count && (
+ <span>{provider.rating && '•'} {provider.completed_cleanings_count.toLocaleString()}+ Homes Cleaned</span>
+ )}
+ {provider.years_in_business && (
+ <span>{(provider.rating || provider.completed_cleanings_count) && '•'} {provider.years_in_business}+ Years Experience</span>
+ )}
  </div>
- </header>
-
- <main className="flex-1 max-w-2xl mx-auto w-full p-4">
- <div className="mb-6">
- <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Confirm your address</h2>
- <p className="text-gray-500 text-sm">Search and select your exact address so {provider.name} knows exactly where to go.</p>
+ )}
+ </div>
  </div>
 
+ {/* Bottom sheet: welcome, address */}
+ <div className="relative -mt-5 rounded-t-[28px] bg-background z-10 pt-6">
+
+ {/* Welcome Message */}
+ <div className="px-5 pb-1">
+ <p className="text-foreground/80 text-sm leading-relaxed">
+ Thanks for choosing us! Let's start by knowing where you'd like our team to come.
+ </p>
+ </div>
+
+ {/* Main Question */}
+ <div className="px-5 pt-4 pb-4">
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Where should we come?</h2>
+ <p className="text-muted-foreground text-sm">Enter the address where you'd like the cleaning service.</p>
+ </div>
+
+ {/* Address Entry Card */}
+ <div className="px-5">
+ <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
  {!selectedAddress ? (
  <>
+ <label htmlFor="address-search" className="block text-sm font-semibold text-foreground mb-1.5">
+ Full Address
+ </label>
  <div className="relative mb-2">
  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
- <Search className="h-5 w-5 text-gray-400"/>
+ <Search className="h-5 w-5 text-muted-foreground"/>
  </div>
  <input
+ id="address-search"
  type="text"
+ role="combobox"
+ aria-expanded={addressSuggestions.length > 0}
+ aria-controls="address-suggestions"
+ autoComplete="off"
  value={addressQuery}
  onChange={e => setAddressQuery(e.target.value)}
- className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
- placeholder="Search your address..."
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="Start typing your street address..."
  />
  </div>
 
  {isSearchingAddress && (
- <p className="text-sm text-gray-400 px-1 mb-2">Searching...</p>
+ <p className="text-sm text-muted-foreground px-1">Searching...</p>
  )}
 
  {addressSuggestions.length > 0 && (
- <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-100 overflow-hidden">
+ <div id="address-suggestions" role="listbox" aria-label="Address suggestions" className="bg-card rounded-xl border border-border shadow-sm divide-y divide-border overflow-hidden">
  {addressSuggestions.map((item: any) => (
  <button
  key={item.place_id}
+ role="option"
+ aria-selected="false"
  onClick={() => handleSelectAddressSuggestion(item)}
- className="w-full flex items-start gap-3 p-4 text-left hover:bg-gray-50 transition-colors"
+ className="w-full flex items-start gap-3 p-4 text-left hover:bg-accent transition-colors cursor-pointer"
  >
- <MapPin className="w-5 h-5 text-gray-400 shrink-0 mt-0.5"/>
- <span className="text-sm text-gray-800">{item.display_name}</span>
+ <MapPin className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5"/>
+ <span className="text-sm text-foreground">{item.display_name}</span>
  </button>
  ))}
  </div>
  )}
 
  {addressError && (
- <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-medium flex items-start gap-2 border border-red-100">
+ <div role="alert" className="mt-4 p-4 bg-destructive/10 text-destructive rounded-xl text-sm font-medium flex items-start gap-2 border border-destructive/20">
  <Info className="w-5 h-5 shrink-0 mt-0.5"/>
  {addressError}
  </div>
  )}
  </>
  ) : (
- <div className="animate-in fade-in duration-300">
- <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-5">
- <div className="flex items-start gap-3 mb-4">
+ <div className="animate-in fade-in duration-300 space-y-4">
+ <div>
+ <div className="flex items-start gap-3 mb-3">
  <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5"/>
- <span className="text-sm text-gray-800 flex-1">{selectedAddress.displayName}</span>
+ <span className="text-sm text-foreground flex-1">{selectedAddress.displayName}</span>
  </div>
  <button
  onClick={() => {
  setSelectedAddress(null);
  setAddressQuery('');
  }}
- className="text-sm font-semibold text-primary hover:underline"
+ className="text-sm font-semibold text-primary hover:underline cursor-pointer"
  >
  Change address
  </button>
  </div>
 
- <div className="relative mb-2">
+ <div className="pt-1 border-t border-dashed border-border"/>
+
+ <div>
+ <label htmlFor="unit-number" className="block text-sm font-semibold text-foreground mb-1.5">
+ Apartment / Unit <span className="font-normal text-muted-foreground">(optional)</span>
+ </label>
+ <div className="relative">
  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
- <Building2 className="h-5 w-5 text-gray-400"/>
+ <Building2 className="h-5 w-5 text-muted-foreground"/>
  </div>
  <input
+ id="unit-number"
  type="text"
  value={unitNumber}
  onChange={e => setUnitNumber(e.target.value)}
- className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
- placeholder="Apartment / Unit / Suite number (optional)"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="e.g. Unit 4B"
  />
  </div>
  </div>
+
+ <div>
+ <label htmlFor="buzz-code" className="block text-sm font-semibold text-foreground mb-1.5">
+ Buzz Code <span className="font-normal text-muted-foreground">(optional)</span>
+ </label>
+ <div className="relative">
+ <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+ <Hash className="h-5 w-5 text-muted-foreground"/>
+ </div>
+ <input
+ id="buzz-code"
+ type="text"
+ value={buzzCode}
+ onChange={e => setBuzzCode(e.target.value)}
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="e.g. #1234"
+ />
+ </div>
+ </div>
+
+ <div>
+ <label htmlFor="building-instructions" className="block text-sm font-semibold text-foreground mb-1.5">
+ Building Instructions <span className="font-normal text-muted-foreground">(optional)</span>
+ </label>
+ <div className="relative">
+ <div className="absolute top-4 left-0 pl-4 flex items-center pointer-events-none">
+ <StickyNote className="h-5 w-5 text-muted-foreground"/>
+ </div>
+ <textarea
+ id="building-instructions"
+ value={buildingInstructions}
+ onChange={e => setBuildingInstructions(e.target.value)}
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm resize-none h-20 font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="e.g. Use the side entrance, parking in the back"
+ />
+ </div>
+ </div>
+ </div>
  )}
+ </div>
+ </div>
+ </div>
  </main>
 
- {selectedAddress && (
- <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200/50 z-50 animate-in slide-in-from-bottom-full duration-300">
+ {/* Primary CTA */}
+ <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border z-50 animate-in slide-in-from-bottom-full duration-300">
  <div className="max-w-2xl mx-auto">
  <button
+ disabled={!selectedAddress}
  onClick={() => setAddressConfirmed(true)}
- className="w-full py-4 bg-primary text-white rounded-xl font-bold active:scale-95 transition-all shadow-lg shadow-primary/25"
+ className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-lg shadow-primary/25 cursor-pointer"
  >
- Book
+ Continue
  </button>
  </div>
  </div>
- )}
  </div>
  );
  }
 
  return (
- <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-primary/20">
+ <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20">
  <Head title={`${getStepTitle()} | ${provider.name}`} />
- 
+
  {/* Top App Bar - Fixed */}
- <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+ <header className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
  <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
- <div className="flex items-center gap-3">
+ <div className="flex items-center gap-3 min-w-0">
  {step > 1 && step < 5 ? (
- <button 
+ <button
  onClick={() => setStep(s => s - 1)}
- className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors active:scale-95"
+ aria-label="Go back to previous step"
+ className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors active:scale-95 cursor-pointer shrink-0"
  >
- <ArrowLeft className="w-5 h-5 text-gray-700"/>
+ <ArrowLeft className="w-5 h-5 text-foreground"/>
  </button>
  ) : (
- <div className="w-9"></div> // Spacer for alignment
+ <div className="w-9 shrink-0" aria-hidden="true"></div>
  )}
- <h1 className="text-lg font-bold text-gray-900 truncate">
+ <h1 className="text-lg font-semibold font-heading text-foreground truncate">
  {getStepTitle()}
  </h1>
  </div>
- {/* Tiny Progress Indicator */}
+ {/* Step Count */}
  {step < 5 && (
- <div className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
- {step} / 4
+ <div className="text-xs font-semibold text-primary bg-accent px-2.5 py-1 rounded-full shrink-0">
+ Step {step} of 4
  </div>
  )}
  </div>
+ {/* Progress Bar */}
+ {step < 5 && (
+ <div className="h-1 w-full bg-muted" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4} aria-label="Booking progress">
+ <div
+ className="h-full bg-primary transition-all duration-300 ease-out"
+ style={{ width: `${(step / 4) * 100}%` }}
+ />
+ </div>
+ )}
  </header>
 
  {/* Main Content Area */}
@@ -419,8 +542,8 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {step === 1 && (
  <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-300">
  <div className="mb-6">
- <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Hi, {provider.name}</h2>
- <p className="text-gray-500 text-sm">What kind of property needs cleaning?</p>
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Hi, {provider.name}</h2>
+ <p className="text-muted-foreground text-sm">What kind of property needs cleaning?</p>
  </div>
  <div className="space-y-4">
  {homeTypes.map(type => (
@@ -430,16 +553,16 @@ export default function BookingWizard({ provider }: { provider: any }) {
  setSelectedHomeTypeId(type.id);
  setStep(2);
  }}
- className="w-full flex items-center p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98] group"
+ className="w-full flex items-center p-4 bg-card rounded-2xl border border-border hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98] group cursor-pointer"
  >
- <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mr-4 group-hover:bg-primary/10 transition-colors">
- <MapPin className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors"/>
+ <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mr-4 group-hover:bg-primary/10 transition-colors shrink-0">
+ <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors"/>
  </div>
- <div className="flex-1 text-left">
- <h3 className="text-lg font-semibold text-gray-900">{type.label}</h3>
- <p className="text-sm text-gray-500 line-clamp-1">{type.description || 'Standard cleaning for this property size.'}</p>
+ <div className="flex-1 text-left min-w-0">
+ <h3 className="text-lg font-semibold text-foreground">{type.label}</h3>
+ <p className="text-sm text-muted-foreground line-clamp-1">{type.description || 'Standard cleaning for this property size.'}</p>
  </div>
- <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary transition-colors"/>
+ <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0"/>
  </button>
  ))}
  </div>
@@ -450,45 +573,48 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {step === 2 && (
  <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-300">
  <div className="mb-6">
- <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Add Services</h2>
- <p className="text-gray-500 text-sm">Customize your cleaning package.</p>
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Add Services</h2>
+ <p className="text-muted-foreground text-sm">Customize your cleaning package.</p>
  </div>
- 
+
  <div className="space-y-4">
  {serviceItems.map(item => {
  const qty = cart[item.id] || 0;
  return (
- <div key={item.id} className="flex p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group">
- {qty > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
- <div className="flex-1 pr-4">
+ <div key={item.id} className={`flex p-4 bg-card rounded-2xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group ${qty > 0 ? 'border-primary/30' : 'border-border'}`}>
+ {qty > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" aria-hidden="true"></div>}
+ <div className="flex-1 pr-4 min-w-0">
  <div className="flex items-center gap-2 mb-1">
- {qty > 0 && <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10"/>}
- <h3 className="font-bold text-gray-900 text-base">{item.name}</h3>
+ {qty > 0 && <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10 shrink-0"/>}
+ <h3 className="font-bold text-foreground text-base">{item.name}</h3>
  </div>
- <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide font-medium">{item.category}</div>
- <div className="font-semibold text-gray-900">${item.price}</div>
+ <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide font-medium">{item.category}</div>
+ <div className="font-semibold text-foreground">${item.price}</div>
  </div>
- 
- <div className="flex flex-col items-end justify-center">
+
+ <div className="flex flex-col items-end justify-center shrink-0">
  {qty === 0 ? (
- <button 
+ <button
  onClick={() => handleAddService(item.id)}
- className="px-6 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-full transition-colors text-sm active:scale-95"
+ aria-label={`Add ${item.name}`}
+ className="px-6 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-full transition-colors text-sm active:scale-95 cursor-pointer"
  >
  Add
  </button>
  ) : (
- <div className="flex items-center bg-gray-50 rounded-full border border-gray-200">
- <button 
+ <div className="flex items-center bg-muted rounded-full border border-border">
+ <button
  onClick={() => handleRemoveService(item.id)}
- className="w-9 h-9 flex items-center justify-center text-gray-600 hover:text-primary transition-colors active:scale-90"
+ aria-label={`Remove one ${item.name}`}
+ className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors active:scale-90 cursor-pointer"
  >
  <Minus className="w-4 h-4"/>
  </button>
- <span className="w-6 text-center font-semibold text-gray-900 text-sm">{qty}</span>
- <button 
+ <span className="w-6 text-center font-semibold text-foreground text-sm" aria-live="polite">{qty}</span>
+ <button
  onClick={() => handleAddService(item.id)}
- className="w-9 h-9 flex items-center justify-center text-gray-600 hover:text-primary transition-colors active:scale-90"
+ aria-label={`Add one more ${item.name}`}
+ className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors active:scale-90 cursor-pointer"
  >
  <Plus className="w-4 h-4"/>
  </button>
@@ -506,12 +632,12 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {step === 3 && (
  <div className="animate-in fade-in slide-in-from-right-4 duration-300">
  {/* Horizontal Date Picker */}
- <div className="bg-white pt-6 pb-4 border-b border-gray-100 sticky top-14 z-40">
+ <div className="bg-card pt-6 pb-4 border-b border-border sticky top-14 z-40">
  <div className="px-4 mb-4 flex items-center justify-between">
- <h2 className="text-xl font-extrabold text-gray-900">When do you need us?</h2>
- <CalendarDays className="w-5 h-5 text-gray-400"/>
+ <h2 className="text-xl font-bold font-heading text-foreground">When do you need us?</h2>
+ <CalendarDays className="w-5 h-5 text-muted-foreground"/>
  </div>
- 
+
  <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2 gap-3 snap-x">
  {dates.map((d, i) => {
  const isSelected = selectedDate === d.value;
@@ -522,16 +648,17 @@ export default function BookingWizard({ provider }: { provider: any }) {
  setSelectedDate(d.value);
  setSelectedTime('');
  }}
- className={`flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-all duration-300 hover:-translate-y-0.5 active:scale-95 ${
- isSelected 
- ? 'border-primary bg-primary/5 shadow-sm' 
- : 'border-gray-100 bg-white hover:border-gray-200'
+ aria-pressed={isSelected}
+ className={`flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer ${
+ isSelected
+ ? 'border-primary bg-primary/5 shadow-sm'
+ : 'border-border bg-card hover:border-primary/30'
  }`}
  >
- <span className={`text-xs uppercase font-semibold mb-1 ${isSelected ? 'text-primary' : 'text-gray-500'}`}>
+ <span className={`text-xs uppercase font-semibold mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
  {d.isToday ? 'Today' : d.dayLabel}
  </span>
- <span className={`text-xl font-bold ${isSelected ? 'text-primary' : 'text-gray-900 '}`}>
+ <span className={`text-xl font-bold ${isSelected ? 'text-primary' : 'text-foreground'}`}>
  {d.dayNumber}
  </span>
  </button>
@@ -543,8 +670,8 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {/* Time Slots */}
  <div className="p-4 pt-6">
  {!selectedDate ? (
- <div className="text-center py-12 text-gray-500 flex flex-col items-center">
- <Clock className="w-12 h-12 text-gray-200 mb-3"/>
+ <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
+ <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
  <p>Please select a date to view available times.</p>
  </div>
  ) : (
@@ -552,10 +679,10 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {periods.map(period => {
  const periodSlots = timeSlots.filter(s => s.period === period);
  if (periodSlots.length === 0) return null;
- 
+
  return (
  <div key={period}>
- <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider flex items-center gap-2">
+ <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2">
  {period}
  </h3>
  <div className="grid grid-cols-3 gap-3">
@@ -565,13 +692,14 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <button
  key={slot.time}
  disabled={!slot.available}
+ aria-pressed={isSelected}
  onClick={() => setSelectedTime(slot.time)}
  className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-all active:scale-95 flex items-center justify-center ${
- !slot.available 
- ? 'bg-gray-50 border-transparent text-gray-400 line-through cursor-not-allowed'
+ !slot.available
+ ? 'bg-muted border-transparent text-muted-foreground line-through cursor-not-allowed'
  : isSelected
- ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
- : 'bg-white border-gray-100 text-gray-700 hover:border-gray-300'
+ ? 'bg-primary border-primary text-primary-foreground shadow-md shadow-primary/20 cursor-pointer'
+ : 'bg-card border-border text-foreground hover:border-success/50 hover:bg-success/5 cursor-pointer'
  }`}
  >
  {slot.label}
@@ -592,9 +720,9 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {step === 4 && (
  <div className="animate-in fade-in slide-in-from-right-4 duration-300">
  {/* Receipt Summary */}
- <div className="bg-white p-6 border-b border-gray-100">
- <h2 className="text-xl font-extrabold text-gray-900 mb-4">Summary</h2>
- 
+ <div className="bg-card p-6 border-b border-border">
+ <h2 className="text-xl font-bold font-heading text-foreground mb-4">Summary</h2>
+
  <div className="space-y-3 mb-6">
  {Object.entries(cart).map(([id, qty]) => {
  const item = serviceItems.find(s => s.id === parseInt(id));
@@ -602,97 +730,122 @@ export default function BookingWizard({ provider }: { provider: any }) {
  return (
  <div key={id} className="flex justify-between items-start text-sm">
  <div className="flex-1">
- <span className="font-semibold text-gray-900">{qty}x {item.name}</span>
+ <span className="font-semibold text-foreground">{qty}x {item.name}</span>
  </div>
- <div className="font-medium text-gray-900">${item.price * qty}</div>
+ <div className="font-medium text-foreground">${item.price * qty}</div>
  </div>
  )
  })}
  </div>
- 
- <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
- <span className="font-bold text-gray-900 text-lg">Total to pay</span>
- <span className="font-black text-2xl text-gray-900">${totalQuote}</span>
+
+ <div className="pt-4 border-t border-dashed border-border flex justify-between items-center">
+ <span className="font-bold text-foreground text-lg">Total to pay</span>
+ <span className="font-black text-2xl text-foreground">${totalQuote}</span>
  </div>
  </div>
 
  {/* User Details Form */}
  <div className="p-4 pt-6 space-y-5">
- <h2 className="text-xl font-extrabold text-gray-900">Your Details</h2>
+ <h2 className="text-xl font-bold font-heading text-foreground">Your Details</h2>
 
- <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
- <MapPin className="w-5 h-5 text-gray-400 shrink-0 mt-0.5"/>
- <div className="flex-1 text-sm text-gray-800">
+ <div className="flex items-start gap-3 p-4 bg-card rounded-xl border border-border shadow-sm">
+ <MapPin className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5"/>
+ <div className="flex-1 text-sm text-foreground min-w-0">
  {selectedAddress?.displayName}
- {unitNumber && <span className="block text-gray-500 mt-0.5">Unit {unitNumber}</span>}
+ {unitNumber && <span className="block text-muted-foreground mt-0.5">Unit {unitNumber}</span>}
  </div>
  <button
  onClick={() => setAddressConfirmed(false)}
- className="text-gray-400 hover:text-primary transition-colors shrink-0"
+ className="text-muted-foreground hover:text-primary transition-colors shrink-0 cursor-pointer"
  aria-label="Change address"
  >
  <Pencil className="w-4 h-4"/>
  </button>
  </div>
 
+ <div>
+ <label htmlFor="customer-name" className="block text-sm font-semibold text-foreground mb-1.5">Full Name</label>
  <div className="relative">
  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
- <User className="h-5 w-5 text-gray-400"/>
+ <User className="h-5 w-5 text-muted-foreground"/>
  </div>
- <input 
+ <input
+ id="customer-name"
  type="text"
+ required
+ autoComplete="name"
  value={customer.name}
  onChange={e => setCustomer({...customer, name: e.target.value})}
- className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
- placeholder="Full Name"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="Jane Doe"
  />
  </div>
-
- <div className="relative">
- <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
- <Phone className="h-5 w-5 text-gray-400"/>
- </div>
- <input 
- type="tel"
- value={customer.phone}
- onChange={e => setCustomer({...customer, phone: e.target.value})}
- className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
- placeholder="Phone Number"
- />
- </div>
-
- <div className="relative">
- <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
- <Mail className="h-5 w-5 text-gray-400"/>
- </div>
- <input 
- type="email"
- value={customer.email}
- onChange={e => setCustomer({...customer, email: e.target.value})}
- className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
- placeholder="Email Address"
- />
  </div>
 
  <div>
- <textarea 
+ <label htmlFor="customer-phone" className="block text-sm font-semibold text-foreground mb-1.5">Phone Number</label>
+ <div className="relative">
+ <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+ <Phone className="h-5 w-5 text-muted-foreground"/>
+ </div>
+ <input
+ id="customer-phone"
+ type="tel"
+ required
+ autoComplete="tel"
+ value={customer.phone}
+ onChange={e => setCustomer({...customer, phone: e.target.value})}
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="(555) 123-4567"
+ />
+ </div>
+ </div>
+
+ <div>
+ <label htmlFor="customer-email" className="block text-sm font-semibold text-foreground mb-1.5">
+ Email Address {reminderMinutesBefore !== null && <span className="text-muted-foreground font-normal">(needed for your reminder)</span>}
+ </label>
+ <div className="relative">
+ <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+ <Mail className="h-5 w-5 text-muted-foreground"/>
+ </div>
+ <input
+ id="customer-email"
+ type="email"
+ autoComplete="email"
+ value={customer.email}
+ onChange={e => setCustomer({...customer, email: e.target.value})}
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ placeholder="jane@example.com"
+ />
+ </div>
+ </div>
+
+ <div>
+ <label htmlFor="customer-notes" className="block text-sm font-semibold text-foreground mb-1.5">
+ Notes <span className="font-normal text-muted-foreground">(optional)</span>
+ </label>
+ <textarea
+ id="customer-notes"
  value={customer.notes}
  onChange={e => setCustomer({...customer, notes: e.target.value})}
- className="w-full p-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm resize-none h-24"
+ className="w-full p-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm resize-none h-24 placeholder:text-muted-foreground text-foreground"
  placeholder="Any special instructions for the professional?"
  ></textarea>
  </div>
 
  <div>
- <h3 className="text-sm font-bold text-gray-900 mb-3">How are you paying?</h3>
- <div className="grid grid-cols-2 gap-3">
+ <h3 className="text-sm font-bold text-foreground mb-3">How are you paying?</h3>
+ <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Payment method">
  <button
  type="button"
+ role="radio"
+ aria-checked={paymentMethod === 'cash'}
  onClick={() => setPaymentMethod('cash')}
- className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 ${
+ className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 cursor-pointer ${
  paymentMethod === 'cash'
  ? 'border-primary bg-primary/5 text-primary shadow-sm'
- : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ : 'border-border bg-card text-foreground hover:border-primary/30'
  }`}
  >
  <Banknote className="w-6 h-6"/>
@@ -700,11 +853,13 @@ export default function BookingWizard({ provider }: { provider: any }) {
  </button>
  <button
  type="button"
+ role="radio"
+ aria-checked={paymentMethod === 'etransfer'}
  onClick={() => setPaymentMethod('etransfer')}
- className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 ${
+ className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 cursor-pointer ${
  paymentMethod === 'etransfer'
  ? 'border-primary bg-primary/5 text-primary shadow-sm'
- : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ : 'border-border bg-card text-foreground hover:border-primary/30'
  }`}
  >
  <Landmark className="w-6 h-6"/>
@@ -714,22 +869,24 @@ export default function BookingWizard({ provider }: { provider: any }) {
  </div>
 
  <div>
- <h3 className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
- <BellRing className="w-4 h-4 text-gray-400"/>
+ <h3 className="text-sm font-bold text-foreground mb-1 flex items-center gap-2">
+ <BellRing className="w-4 h-4 text-muted-foreground"/>
  Email reminder (optional)
  </h3>
  {availableReminderOptions.length === 0 ? (
- <p className="text-sm text-gray-400">No reminder options are available this close to your appointment.</p>
+ <p className="text-sm text-muted-foreground">No reminder options are available this close to your appointment.</p>
  ) : (
  <>
- <div className="flex flex-wrap gap-2">
+ <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Reminder time">
  <button
  type="button"
+ role="radio"
+ aria-checked={reminderMinutesBefore === null}
  onClick={() => setReminderMinutesBefore(null)}
- className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 ${
+ className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 cursor-pointer ${
  reminderMinutesBefore === null
  ? 'border-primary bg-primary/5 text-primary'
- : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ : 'border-border bg-card text-foreground hover:border-primary/30'
  }`}
  >
  No reminder
@@ -738,11 +895,13 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <button
  key={opt.minutes}
  type="button"
+ role="radio"
+ aria-checked={reminderMinutesBefore === opt.minutes}
  onClick={() => setReminderMinutesBefore(opt.minutes)}
- className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 ${
+ className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 cursor-pointer ${
  reminderMinutesBefore === opt.minutes
  ? 'border-primary bg-primary/5 text-primary'
- : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ : 'border-border bg-card text-foreground hover:border-primary/30'
  }`}
  >
  {opt.label}
@@ -757,7 +916,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  </div>
 
  {error && (
- <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm font-medium flex items-start gap-2 border border-red-100">
+ <div role="alert" aria-live="assertive" className="p-4 bg-destructive/10 text-destructive rounded-xl text-sm font-medium flex items-start gap-2 border border-destructive/20">
  <Info className="w-5 h-5 shrink-0 mt-0.5"/>
  {error}
  </div>
@@ -770,21 +929,21 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {step === 5 && (
  <div className="flex flex-col items-center justify-center py-16 px-4 animate-in zoom-in-95 duration-500">
  <div className="relative mb-8">
- <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full"></div>
- <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center relative shadow-lg shadow-green-500/30 text-white">
+ <div className="absolute inset-0 bg-success/20 blur-xl rounded-full" aria-hidden="true"></div>
+ <div className="w-24 h-24 bg-success rounded-full flex items-center justify-center relative shadow-lg shadow-success/30 text-success-foreground">
  <Check className="w-12 h-12"strokeWidth={3} />
  </div>
  </div>
- <h2 className="text-3xl font-black text-gray-900 mb-3">Booking Confirmed!</h2>
- 
- <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm w-full mb-8">
- <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
- <span className="text-gray-500">Reference ID</span>
- <span className="font-mono font-bold text-gray-900">{bookingResponse?.reference_id}</span>
+ <h2 className="text-3xl font-black font-heading text-foreground mb-3">Booking Confirmed!</h2>
+
+ <div className="bg-card rounded-2xl p-6 border border-border shadow-sm w-full mb-8">
+ <div className="flex justify-between items-center mb-4 pb-4 border-b border-border">
+ <span className="text-muted-foreground">Reference ID</span>
+ <span className="font-mono font-bold text-foreground">{bookingResponse?.reference_id}</span>
  </div>
  <div className="flex justify-between items-center">
- <span className="text-gray-500">Total</span>
- <span className="font-bold text-gray-900">${bookingResponse?.total_quote}</span>
+ <span className="text-muted-foreground">Total</span>
+ <span className="font-bold text-foreground">${bookingResponse?.total_quote}</span>
  </div>
  </div>
 
@@ -792,30 +951,30 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 w-full mb-8">
  <div className="flex items-center gap-2 mb-2">
  <Landmark className="w-5 h-5 text-primary"/>
- <span className="font-bold text-gray-900">Send your e-transfer to</span>
+ <span className="font-bold text-foreground">Send your e-transfer to</span>
  </div>
- <p className="text-gray-700">
+ <p className="text-foreground/80">
  {provider.etransfer_email || 'The provider will contact you with e-transfer details.'}
  </p>
  </div>
  )}
 
  {bookingResponse?.reminder_minutes_before && (
- <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full mb-8 flex items-center gap-3 shadow-sm">
+ <div className="bg-card border border-border rounded-2xl p-6 w-full mb-8 flex items-center gap-3 shadow-sm">
  <BellRing className="w-5 h-5 text-primary shrink-0"/>
- <p className="text-gray-700 text-sm">
+ <p className="text-foreground/80 text-sm">
  We'll email you a reminder {reminderLabel(bookingResponse.reminder_minutes_before)} your appointment.
  </p>
  </div>
  )}
 
- <p className="text-gray-500 text-center mb-8 max-w-sm">
- Thank you, <span className="font-semibold text-gray-900">{customer.name}</span>. Your service is scheduled. We've sent details to your email.
+ <p className="text-muted-foreground text-center mb-8 max-w-sm">
+ Thank you, <span className="font-semibold text-foreground">{customer.name}</span>. Your service is scheduled. We've sent details to your email.
  </p>
- 
- <button 
+
+ <button
  onClick={() => window.location.reload()}
- className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl active:scale-95 transition-all shadow-xl"
+ className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-xl active:scale-95 transition-all shadow-xl cursor-pointer"
  >
  Book Another Service
  </button>
@@ -825,26 +984,26 @@ export default function BookingWizard({ provider }: { provider: any }) {
 
  {/* Sticky Bottom Action Bar */}
  {step > 1 && step < 5 && (
- <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200/50 z-50 animate-in slide-in-from-bottom-full duration-300">
+ <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border z-50 animate-in slide-in-from-bottom-full duration-300">
  <div className="max-w-2xl mx-auto flex items-center gap-4">
  {step === 2 && (
  <>
- <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center relative">
- <ShoppingCart className="w-5 h-5 text-gray-600"/>
+ <div className="flex-shrink-0 w-12 h-12 bg-muted rounded-xl flex items-center justify-center relative">
+ <ShoppingCart className="w-5 h-5 text-muted-foreground"/>
  {totalItems > 0 && (
- <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold border-2 border-white animate-in zoom-in spin-in-12 duration-300">
+ <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold border-2 border-card animate-in zoom-in spin-in-12 duration-300">
  {totalItems}
  </div>
  )}
  </div>
- <div className="flex-1">
- <div className="text-xs text-gray-500 font-medium">Total Price</div>
- <div className="text-xl font-black text-gray-900">${totalQuote}</div>
+ <div className="flex-1 min-w-0">
+ <div className="text-xs text-muted-foreground font-medium">Total Price</div>
+ <div className="text-xl font-black text-foreground">${totalQuote}</div>
  </div>
- <button 
+ <button
  disabled={totalItems === 0}
  onClick={() => setStep(3)}
- className="px-8 py-3.5 bg-primary text-white rounded-xl font-bold disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-primary/25"
+ className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-primary/25 cursor-pointer"
  >
  Continue
  </button>
@@ -853,18 +1012,18 @@ export default function BookingWizard({ provider }: { provider: any }) {
 
  {step === 3 && (
  <>
- <div className="flex-1">
- <div className="text-xs text-gray-500 font-medium">Selected Slot</div>
- <div className="text-sm font-bold text-gray-900 truncate">
- {selectedDate && selectedTime 
+ <div className="flex-1 min-w-0">
+ <div className="text-xs text-muted-foreground font-medium">Selected Slot</div>
+ <div className="text-sm font-bold text-foreground truncate">
+ {selectedDate && selectedTime
  ? `${new Date(selectedDate).toLocaleDateString('en-US', {month:'short', day:'numeric'})}, ${selectedTime}`
  : 'None'}
  </div>
  </div>
- <button 
+ <button
  disabled={!selectedDate || !selectedTime}
  onClick={() => setStep(4)}
- className="px-8 py-3.5 bg-primary text-white rounded-xl font-bold disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-primary/25"
+ className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-primary/25 cursor-pointer"
  >
  Proceed
  </button>
@@ -873,17 +1032,17 @@ export default function BookingWizard({ provider }: { provider: any }) {
 
  {step === 4 && (
  <>
- <div className="flex-1">
- <div className="text-xs text-gray-500 font-medium">Total to pay</div>
- <div className="text-xl font-black text-gray-900">${totalQuote}</div>
+ <div className="flex-1 min-w-0">
+ <div className="text-xs text-muted-foreground font-medium">Total to pay</div>
+ <div className="text-xl font-black text-foreground">${totalQuote}</div>
  </div>
- <button 
+ <button
  disabled={!customer.name || !customer.phone || !paymentMethod || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
  onClick={submitBooking}
- className="px-8 py-3.5 bg-primary text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-primary/25"
+ className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-primary/25 cursor-pointer"
  >
  {isSubmitting ? (
- <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+ <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" aria-hidden="true"></div>
  ) : 'Confirm Booking'}
  </button>
  </>

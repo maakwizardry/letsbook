@@ -26,6 +26,8 @@ class BookingController extends Controller
             'customer_email' => 'nullable|email|max:255',
             'customer_address' => 'required|string',
             'unit_number' => 'nullable|string|max:255',
+            'buzz_code' => 'nullable|string|max:255',
+            'building_instructions' => 'nullable|string',
             'postal_code' => 'nullable|string|max:255',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
@@ -77,6 +79,8 @@ class BookingController extends Controller
         $addressAttributes = [
             'address' => $validated['customer_address'],
             'unit_number' => $validated['unit_number'] ?? null,
+            'buzz_code' => $validated['buzz_code'] ?? null,
+            'building_instructions' => $validated['building_instructions'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
