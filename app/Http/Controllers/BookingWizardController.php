@@ -15,7 +15,18 @@ class BookingWizardController extends Controller
 
         $completedCleanings = $provider->bookings()->count();
 
+        $availability = $provider->availabilities()
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
+            ->get()
+            ->map(fn ($availability) => [
+                'day_of_week' => $availability->day_of_week,
+                'start_time' => substr($availability->start_time, 0, 5),
+                'end_time' => substr($availability->end_time, 0, 5),
+            ]);
+
         return Inertia::render('Booking/Index', [
+            'availability' => $availability,
             'provider' => [
                 'id' => $provider->id,
                 'name' => $provider->name,

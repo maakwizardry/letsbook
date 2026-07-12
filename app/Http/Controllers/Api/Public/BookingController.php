@@ -55,7 +55,7 @@ class BookingController extends Controller
         // Assuming 1 hour blocks. Check if any active booking overlaps with this time.
         // Overlap occurs if an existing booking's time is within 1 hour before or after the new time.
         $overlap = Booking::where('provider_id', $providerId)
-            ->where('status', '!=', 'Cancelled')
+            ->where('status', '!=', Booking::STATUS_CANCELLED)
             ->where('scheduled_at', '>', $scheduledAt->copy()->subHour())
             ->where('scheduled_at', '<', $scheduledAt->copy()->addHour())
             ->exists();
@@ -112,6 +112,7 @@ class BookingController extends Controller
             'reference_id' => 'BKG-' . strtoupper(Str::random(6)),
             'total_quote' => $total,
             'payment_method' => $validated['payment_method'],
+            'status' => Booking::STATUS_PENDING,
             'notes' => $validated['notes'] ?? null,
             'scheduled_at' => $scheduledAt,
             'reminder_minutes_before' => $remindAt ? $validated['reminder_minutes_before'] : null,

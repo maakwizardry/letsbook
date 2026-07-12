@@ -44,7 +44,7 @@ function reminderLabel(minutes: number | null | undefined) {
  return REMINDER_OPTIONS.find(o => o.minutes === minutes)?.label || null;
 }
 
-export default function BookingWizard({ provider }: { provider: any }) {
+export default function BookingWizard({ provider, availability = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[] }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
  const [step, setStep] = useState(1);
  
@@ -225,6 +225,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  arr.push({
  dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
  dayNumber: d.getDate(),
+ dayOfWeek: d.getDay(),
  value: d.toISOString().split('T')[0],
  isToday: i === 0
  });
@@ -232,9 +233,27 @@ export default function BookingWizard({ provider }: { provider: any }) {
  return arr;
  }, []);
 
+ const selectedDayOfWeek = useMemo(
+ () => dates.find(d => d.value === selectedDate)?.dayOfWeek,
+ [dates, selectedDate]
+ );
+
  const timeSlots = useMemo(() => {
- const slots = [];
- for (let i = 8; i <= 18; i++) {
+ if (selectedDayOfWeek === undefined) return [];
+
+ const windows = availability.filter((a: any) => a.day_of_week === selectedDayOfWeek);
+ if (windows.length === 0) return [];
+
+ const hours = new Set<number>();
+ windows.forEach((w: any) => {
+ const startHour = parseInt(w.start_time.split(':')[0], 10);
+ const endHour = parseInt(w.end_time.split(':')[0], 10);
+ for (let i = startHour; i + 1 <= endHour; i++) {
+ hours.add(i);
+ }
+ });
+
+ const slots = Array.from(hours).sort((a, b) => a - b).map(i => {
  const hourStr = i.toString().padStart(2, '0');
  const timeString = `${hourStr}:00`;
  const isBooked = bookedSlots.some(isoStr => {
@@ -243,11 +262,11 @@ export default function BookingWizard({ provider }: { provider: any }) {
  });
  const period = i < 12 ? 'Morning' : (i < 16 ? 'Afternoon' : 'Evening');
  const formatted = i > 12 ? `${i-12}:00 PM` : (i === 12 ? '12:00 PM' : `${i}:00 AM`);
- 
- slots.push({ time: timeString, label: formatted, period, available: !isBooked });
- }
+
+ return { time: timeString, label: formatted, period, available: !isBooked };
+ });
  return slots;
- }, [bookedSlots]);
+ }, [bookedSlots, availability, selectedDayOfWeek]);
 
  const periods = ['Morning', 'Afternoon', 'Evening'];
 
@@ -641,24 +660,28 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2 gap-3 snap-x">
  {dates.map((d, i) => {
  const isSelected = selectedDate === d.value;
+ const isAvailable = availability.some((a: any) => a.day_of_week === d.dayOfWeek);
  return (
  <button
  key={d.value}
+ disabled={!isAvailable}
  onClick={() => {
  setSelectedDate(d.value);
  setSelectedTime('');
  }}
  aria-pressed={isSelected}
- className={`flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer ${
- isSelected
- ? 'border-primary bg-primary/5 shadow-sm'
- : 'border-border bg-card hover:border-primary/30'
+ className={`flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-all duration-300 ${
+ !isAvailable
+ ? 'border-transparent bg-muted text-muted-foreground/50 cursor-not-allowed'
+ : `hover:-translate-y-0.5 active:scale-95 cursor-pointer ${
+ isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/30'
+ }`
  }`}
  >
- <span className={`text-xs uppercase font-semibold mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
+ <span className={`text-xs uppercase font-semibold mb-1 ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
  {d.isToday ? 'Today' : d.dayLabel}
  </span>
- <span className={`text-xl font-bold ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+ <span className={`text-xl font-bold ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-foreground'}`}>
  {d.dayNumber}
  </span>
  </button>
@@ -673,6 +696,11 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
  <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
  <p>Please select a date to view available times.</p>
+ </div>
+ ) : timeSlots.length === 0 ? (
+ <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
+ <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
+ <p>This provider isn't available on this day.</p>
  </div>
  ) : (
  <div className="space-y-8 animate-in fade-in duration-300">

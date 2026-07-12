@@ -19,7 +19,7 @@ class AvailabilityController extends Controller
         ]);
 
         $query = Booking::where('provider_id', $request->provider_id)
-            ->where('status', '!=', 'Cancelled')
+            ->where('status', '!=', Booking::STATUS_CANCELLED)
             ->whereNotNull('scheduled_at');
 
         if ($request->has('start_date')) {

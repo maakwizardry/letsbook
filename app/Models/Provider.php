@@ -57,6 +57,11 @@ class Provider extends Authenticatable
         return $this->hasMany(Booking::class);
     }
 
+    public function availabilities()
+    {
+        return $this->hasMany(Availability::class);
+    }
+
     /**
      * Give a freshly registered provider a starter catalog so their booking
      * page isn't empty before they've had a chance to configure it.
