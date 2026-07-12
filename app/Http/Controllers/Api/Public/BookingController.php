@@ -24,11 +24,23 @@ class BookingController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:255',
             'customer_email' => 'nullable|email|max:255',
-            'customer_address' => 'nullable|string',
+            'customer_address' => 'required|string',
+            'unit_number' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|max:255',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
             'notes' => 'nullable|string',
             'scheduled_at' => 'required|date',
             'payment_method' => 'required|in:cash,etransfer',
+            'reminder_minutes_before' => 'nullable|integer|in:30,60,180,1440',
         ]);
+
+        if (!empty($validated['reminder_minutes_before']) && empty($validated['customer_email'])) {
+            return response()->json([
+                'message' => 'An email address is required to receive a booking reminder.',
+                'errors' => ['customer_email' => ['An email address is required to receive a booking reminder.']]
+            ], 422);
+        }
 
         $homeType = HomeType::findOrFail($validated['home_type_id']);
         $providerId = $homeType->provider_id;
@@ -62,13 +74,31 @@ class BookingController extends Controller
              $customer = Customer::where('phone', $validated['customer_phone'])->first();
         }
 
+        $addressAttributes = [
+            'address' => $validated['customer_address'],
+            'unit_number' => $validated['unit_number'] ?? null,
+            'postal_code' => $validated['postal_code'] ?? null,
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
+        ];
+
         if (!$customer) {
-            $customer = Customer::create([
+            $customer = Customer::create(array_merge([
                 'name' => $validated['customer_name'],
                 'phone' => $validated['customer_phone'] ?? null,
                 'email' => $validated['customer_email'] ?? null,
-                'address' => $validated['customer_address'] ?? null,
-            ]);
+            ], $addressAttributes));
+        } else {
+            // Keep the address current since the job site may differ from a previous booking.
+            $customer->update($addressAttributes);
+        }
+
+        $remindAt = null;
+        if (!empty($validated['reminder_minutes_before'])) {
+            $candidate = $scheduledAt->copy()->subMinutes($validated['reminder_minutes_before']);
+            if ($candidate->isFuture()) {
+                $remindAt = $candidate;
+            }
         }
 
         $booking = Booking::create([
@@ -80,6 +110,8 @@ class BookingController extends Controller
             'payment_method' => $validated['payment_method'],
             'notes' => $validated['notes'] ?? null,
             'scheduled_at' => $scheduledAt,
+            'reminder_minutes_before' => $remindAt ? $validated['reminder_minutes_before'] : null,
+            'remind_at' => $remindAt,
         ]);
 
         foreach ($items as $item) {

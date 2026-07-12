@@ -18,11 +18,16 @@ class Booking extends Model
         'payment_method',
         'status',
         'notes',
-        'scheduled_at'
+        'scheduled_at',
+        'reminder_minutes_before',
+        'remind_at',
+        'reminder_sent_at',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'remind_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
     ];
 
     public function provider()

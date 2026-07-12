@@ -16,8 +16,30 @@ import {
  Info,
  CheckCircle2,
  Banknote,
- Landmark
+ Landmark,
+ Search,
+ Building2,
+ Pencil,
+ BellRing
 } from 'lucide-react';
+
+interface SelectedAddress {
+ displayName: string;
+ lat: number;
+ lon: number;
+ postcode: string;
+}
+
+const REMINDER_OPTIONS = [
+ { minutes: 30, label: '30 min before' },
+ { minutes: 60, label: '1 hour before' },
+ { minutes: 180, label: '3 hours before' },
+ { minutes: 1440, label: '1 day before' },
+];
+
+function reminderLabel(minutes: number | null | undefined) {
+ return REMINDER_OPTIONS.find(o => o.minutes === minutes)?.label || null;
+}
 
 export default function BookingWizard({ provider }: { provider: any }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
@@ -35,11 +57,54 @@ export default function BookingWizard({ provider }: { provider: any }) {
  const [selectedTime, setSelectedTime] = useState<string>('');
  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', notes: '' });
  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'etransfer' | ''>('');
- 
+ const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number | null>(null);
+
+ // Address states
+ const [addressConfirmed, setAddressConfirmed] = useState(false);
+ const [addressQuery, setAddressQuery] = useState('');
+ const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+ const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+ const [addressError, setAddressError] = useState('');
+ const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
+ const [unitNumber, setUnitNumber] = useState('');
+
  // UI states
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [error, setError] = useState('');
  const [bookingResponse, setBookingResponse] = useState<any>(null);
+
+ // Debounced address search via OpenStreetMap Nominatim (no API key required)
+ useEffect(() => {
+ if (selectedAddress && addressQuery === selectedAddress.displayName) {
+ setAddressSuggestions([]);
+ return;
+ }
+ if (addressQuery.trim().length < 3) {
+ setAddressSuggestions([]);
+ return;
+ }
+ setIsSearchingAddress(true);
+ const timeout = setTimeout(() => {
+ fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(addressQuery)}`)
+ .then(res => res.json())
+ .then(data => setAddressSuggestions(data || []))
+ .catch(() => setAddressSuggestions([]))
+ .finally(() => setIsSearchingAddress(false));
+ }, 600);
+ return () => clearTimeout(timeout);
+ }, [addressQuery]);
+
+ const handleSelectAddressSuggestion = (item: any) => {
+ setSelectedAddress({
+ displayName: item.display_name,
+ lat: parseFloat(item.lat),
+ lon: parseFloat(item.lon),
+ postcode: item.address?.postcode || ''
+ });
+ setAddressQuery(item.display_name);
+ setAddressSuggestions([]);
+ setAddressError('');
+ };
 
  // Initial fetch
  useEffect(() => {
@@ -122,7 +187,13 @@ export default function BookingWizard({ provider }: { provider: any }) {
  customer_email: customer.email,
  customer_phone: customer.phone,
  notes: customer.notes,
- payment_method: paymentMethod
+ payment_method: paymentMethod,
+ customer_address: selectedAddress?.displayName,
+ unit_number: unitNumber,
+ postal_code: selectedAddress?.postcode,
+ latitude: selectedAddress?.lat,
+ longitude: selectedAddress?.lon,
+ reminder_minutes_before: reminderMinutesBefore
  })
  });
 
@@ -176,6 +247,19 @@ export default function BookingWizard({ provider }: { provider: any }) {
 
  const periods = ['Morning', 'Afternoon', 'Evening'];
 
+ // Only offer reminder options whose target time hasn't already passed
+ const availableReminderOptions = useMemo(() => {
+ if (!selectedDate || !selectedTime) return [];
+ const scheduledUTC = new Date(`${selectedDate}T${selectedTime}:00Z`).getTime();
+ return REMINDER_OPTIONS.filter(opt => scheduledUTC - opt.minutes * 60000 > Date.now());
+ }, [selectedDate, selectedTime]);
+
+ useEffect(() => {
+ if (reminderMinutesBefore !== null && !availableReminderOptions.some(o => o.minutes === reminderMinutesBefore)) {
+ setReminderMinutesBefore(null);
+ }
+ }, [availableReminderOptions, reminderMinutesBefore]);
+
  // Steps configs
  const getStepTitle = () => {
  switch (step) {
@@ -187,6 +271,115 @@ export default function BookingWizard({ provider }: { provider: any }) {
  default: return '';
  }
  };
+
+ // GATE: Require a confirmed, map-picked address before the booking wizard is shown
+ if (!addressConfirmed) {
+ return (
+ <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-primary/20">
+ <Head title={`Your Address | ${provider.name}`} />
+
+ <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+ <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
+ <h1 className="text-lg font-bold text-gray-900 truncate">Where should we come?</h1>
+ </div>
+ </header>
+
+ <main className="flex-1 max-w-2xl mx-auto w-full p-4">
+ <div className="mb-6">
+ <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Confirm your address</h2>
+ <p className="text-gray-500 text-sm">Search and select your exact address so {provider.name} knows exactly where to go.</p>
+ </div>
+
+ {!selectedAddress ? (
+ <>
+ <div className="relative mb-2">
+ <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+ <Search className="h-5 w-5 text-gray-400"/>
+ </div>
+ <input
+ type="text"
+ value={addressQuery}
+ onChange={e => setAddressQuery(e.target.value)}
+ className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
+ placeholder="Search your address..."
+ />
+ </div>
+
+ {isSearchingAddress && (
+ <p className="text-sm text-gray-400 px-1 mb-2">Searching...</p>
+ )}
+
+ {addressSuggestions.length > 0 && (
+ <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-100 overflow-hidden">
+ {addressSuggestions.map((item: any) => (
+ <button
+ key={item.place_id}
+ onClick={() => handleSelectAddressSuggestion(item)}
+ className="w-full flex items-start gap-3 p-4 text-left hover:bg-gray-50 transition-colors"
+ >
+ <MapPin className="w-5 h-5 text-gray-400 shrink-0 mt-0.5"/>
+ <span className="text-sm text-gray-800">{item.display_name}</span>
+ </button>
+ ))}
+ </div>
+ )}
+
+ {addressError && (
+ <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-medium flex items-start gap-2 border border-red-100">
+ <Info className="w-5 h-5 shrink-0 mt-0.5"/>
+ {addressError}
+ </div>
+ )}
+ </>
+ ) : (
+ <div className="animate-in fade-in duration-300">
+ <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-5">
+ <div className="flex items-start gap-3 mb-4">
+ <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5"/>
+ <span className="text-sm text-gray-800 flex-1">{selectedAddress.displayName}</span>
+ </div>
+ <button
+ onClick={() => {
+ setSelectedAddress(null);
+ setAddressQuery('');
+ }}
+ className="text-sm font-semibold text-primary hover:underline"
+ >
+ Change address
+ </button>
+ </div>
+
+ <div className="relative mb-2">
+ <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+ <Building2 className="h-5 w-5 text-gray-400"/>
+ </div>
+ <input
+ type="text"
+ value={unitNumber}
+ onChange={e => setUnitNumber(e.target.value)}
+ className="w-full pl-11 pr-4 py-4 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal"
+ placeholder="Apartment / Unit / Suite number (optional)"
+ />
+ </div>
+ </div>
+ )}
+ </main>
+
+ {selectedAddress && (
+ <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200/50 z-50 animate-in slide-in-from-bottom-full duration-300">
+ <div className="max-w-2xl mx-auto">
+ <button
+ onClick={() => setAddressConfirmed(true)}
+ className="w-full py-4 bg-primary text-white rounded-xl font-bold active:scale-95 transition-all shadow-lg shadow-primary/25"
+ >
+ Book
+ </button>
+ </div>
+ </div>
+ )}
+ </div>
+ );
+ }
 
  return (
  <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-primary/20">
@@ -426,7 +619,22 @@ export default function BookingWizard({ provider }: { provider: any }) {
  {/* User Details Form */}
  <div className="p-4 pt-6 space-y-5">
  <h2 className="text-xl font-extrabold text-gray-900">Your Details</h2>
- 
+
+ <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+ <MapPin className="w-5 h-5 text-gray-400 shrink-0 mt-0.5"/>
+ <div className="flex-1 text-sm text-gray-800">
+ {selectedAddress?.displayName}
+ {unitNumber && <span className="block text-gray-500 mt-0.5">Unit {unitNumber}</span>}
+ </div>
+ <button
+ onClick={() => setAddressConfirmed(false)}
+ className="text-gray-400 hover:text-primary transition-colors shrink-0"
+ aria-label="Change address"
+ >
+ <Pencil className="w-4 h-4"/>
+ </button>
+ </div>
+
  <div className="relative">
  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
  <User className="h-5 w-5 text-gray-400"/>
@@ -505,6 +713,49 @@ export default function BookingWizard({ provider }: { provider: any }) {
  </div>
  </div>
 
+ <div>
+ <h3 className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
+ <BellRing className="w-4 h-4 text-gray-400"/>
+ Email reminder (optional)
+ </h3>
+ {availableReminderOptions.length === 0 ? (
+ <p className="text-sm text-gray-400">No reminder options are available this close to your appointment.</p>
+ ) : (
+ <>
+ <div className="flex flex-wrap gap-2">
+ <button
+ type="button"
+ onClick={() => setReminderMinutesBefore(null)}
+ className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 ${
+ reminderMinutesBefore === null
+ ? 'border-primary bg-primary/5 text-primary'
+ : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ }`}
+ >
+ No reminder
+ </button>
+ {availableReminderOptions.map(opt => (
+ <button
+ key={opt.minutes}
+ type="button"
+ onClick={() => setReminderMinutesBefore(opt.minutes)}
+ className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 ${
+ reminderMinutesBefore === opt.minutes
+ ? 'border-primary bg-primary/5 text-primary'
+ : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+ }`}
+ >
+ {opt.label}
+ </button>
+ ))}
+ </div>
+ {reminderMinutesBefore !== null && !customer.email && (
+ <p className="text-sm text-amber-600 mt-2">Add your email above so we know where to send the reminder.</p>
+ )}
+ </>
+ )}
+ </div>
+
  {error && (
  <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm font-medium flex items-start gap-2 border border-red-100">
  <Info className="w-5 h-5 shrink-0 mt-0.5"/>
@@ -545,6 +796,15 @@ export default function BookingWizard({ provider }: { provider: any }) {
  </div>
  <p className="text-gray-700">
  {provider.etransfer_email || 'The provider will contact you with e-transfer details.'}
+ </p>
+ </div>
+ )}
+
+ {bookingResponse?.reminder_minutes_before && (
+ <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full mb-8 flex items-center gap-3 shadow-sm">
+ <BellRing className="w-5 h-5 text-primary shrink-0"/>
+ <p className="text-gray-700 text-sm">
+ We'll email you a reminder {reminderLabel(bookingResponse.reminder_minutes_before)} your appointment.
  </p>
  </div>
  )}
@@ -618,7 +878,7 @@ export default function BookingWizard({ provider }: { provider: any }) {
  <div className="text-xl font-black text-gray-900">${totalQuote}</div>
  </div>
  <button 
- disabled={!customer.name || !customer.phone || !paymentMethod || isSubmitting}
+ disabled={!customer.name || !customer.phone || !paymentMethod || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
  onClick={submitBooking}
  className="px-8 py-3.5 bg-primary text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-primary/25"
  >
