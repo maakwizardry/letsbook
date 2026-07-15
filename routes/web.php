@@ -22,5 +22,9 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/provider/{slug}', [BookingWizardController::class, 'show'])->name('provider.booking');
 
+Route::get('/create-provider/secret', function () {
+    return view('create-provider');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

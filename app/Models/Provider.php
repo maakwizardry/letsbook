@@ -16,6 +16,7 @@ class Provider extends Authenticatable
         'contact_info',
         'etransfer_email',
         'slug',
+        'external_url',
         'email',
         'password',
         'logo_path',

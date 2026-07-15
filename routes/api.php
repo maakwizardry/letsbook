@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Api\CreateProviderController;
 use App\Http\Controllers\Api\Public\HomeTypeController as PublicHomeTypeController;
 use App\Http\Controllers\Api\Public\ServiceItemController as PublicServiceItemController;
 use App\Http\Controllers\Api\Public\QuoteController as PublicQuoteController;
@@ -19,6 +20,7 @@ Route::get('/service-items', [PublicServiceItemController::class, 'index']);
 Route::post('/quote', [PublicQuoteController::class, 'calculate']);
 Route::post('/bookings', [PublicBookingController::class, 'store']);
 Route::get('/booked-slots', [PublicAvailabilityController::class, 'index']);
+Route::post('/providers', [CreateProviderController::class, 'store']);
 
 // Provider Endpoints
 Route::middleware('auth:sanctum')->group(function () {
