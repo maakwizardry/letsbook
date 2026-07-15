@@ -167,6 +167,15 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
  }, [cart]);
 
+ const scheduleLabel = useMemo(() => {
+ if (!selectedDate || !selectedTime) return '';
+ const d = new Date(`${selectedDate}T00:00:00`);
+ const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+ const hour = parseInt(selectedTime.split(':')[0], 10);
+ const timeStr = hour > 12 ? `${hour - 12}:00 PM` : hour === 12 ? '12:00 PM' : `${hour}:00 AM`;
+ return `${dateStr} · ${timeStr}`;
+ }, [selectedDate, selectedTime]);
+
  const submitBooking = async () => {
  setIsSubmitting(true);
  setError('');
@@ -955,50 +964,101 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  {/* STEP 5: SUCCESS */}
  {step === 5 && (
- <div className="flex flex-col items-center justify-center py-16 px-4 animate-in zoom-in-95 duration-500">
- <div className="relative mb-8">
- <div className="absolute inset-0 bg-success/20 blur-xl rounded-full" aria-hidden="true"></div>
- <div className="w-24 h-24 bg-success rounded-full flex items-center justify-center relative shadow-lg shadow-success/30 text-success-foreground">
- <Check className="w-12 h-12"strokeWidth={3} />
+ <div className="flex flex-col items-center px-4 pt-10 pb-16 animate-in fade-in slide-in-from-bottom-2 duration-500">
+ <div className="w-14 h-14 bg-success rounded-full flex items-center justify-center shadow-lg shadow-success/25 text-success-foreground mb-5">
+ <Check className="w-7 h-7"strokeWidth={3} />
  </div>
- </div>
- <h2 className="text-3xl font-black font-heading text-foreground mb-3">Booking Confirmed!</h2>
+ <h2 className="text-2xl font-black font-heading text-foreground mb-1.5 text-center">Booking Confirmed!</h2>
+ <p className="text-muted-foreground text-sm text-center mb-8 max-w-sm">
+ Thanks for booking with <span className="font-semibold text-foreground">{provider.name}</span>{customer.name ? `, ${customer.name.split(' ')[0]}` : ''}. We've sent the details to your email.
+ </p>
 
- <div className="bg-card rounded-2xl p-6 border border-border shadow-sm w-full mb-8">
- <div className="flex justify-between items-center mb-4 pb-4 border-b border-border">
- <span className="text-muted-foreground">Reference ID</span>
- <span className="font-mono font-bold text-foreground">{bookingResponse?.reference_id}</span>
+ {/* Receipt Card */}
+ <div className="w-full bg-card rounded-3xl border border-border shadow-sm overflow-hidden mb-6">
+ <div className="flex items-center gap-3 p-5 bg-muted/40 border-b border-dashed border-border">
+ {provider.logo_url ? (
+ <img src={provider.logo_url} alt=""className="w-10 h-10 rounded-xl object-cover border border-border shrink-0"/>
+ ) : (
+ <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+ <Building2 className="w-5 h-5 text-primary"/>
  </div>
- <div className="flex justify-between items-center">
- <span className="text-muted-foreground">Total</span>
- <span className="font-bold text-foreground">${bookingResponse?.total_quote}</span>
+ )}
+ <div className="flex-1 min-w-0">
+ <p className="font-bold text-foreground truncate">{provider.name}</p>
+ <p className="text-xs text-muted-foreground">Home Cleaning Service</p>
+ </div>
+ <div className="text-right shrink-0">
+ <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Ref</p>
+ <p className="font-mono text-sm font-bold text-foreground">{bookingResponse?.reference_id}</p>
+ </div>
+ </div>
+
+ <div className="p-5 space-y-4">
+ <div className="space-y-2.5">
+ {Object.entries(cart).map(([id, qty]) => {
+ const item = serviceItems.find(s => s.id === parseInt(id));
+ if (!item) return null;
+ return (
+ <div key={id} className="flex justify-between items-start text-sm gap-3">
+ <span className="text-foreground/80">{qty}x {item.name}</span>
+ <span className="font-medium text-foreground shrink-0">${item.price * qty}</span>
+ </div>
+ )
+ })}
+ </div>
+
+ <div className="pt-4 border-t border-dashed border-border flex justify-between items-center">
+ <span className="font-bold text-foreground">Total</span>
+ <span className="font-black text-xl text-foreground">${bookingResponse?.total_quote}</span>
+ </div>
+
+ <div className="pt-4 border-t border-border space-y-3">
+ {scheduleLabel && (
+ <div className="flex items-start gap-3">
+ <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
+ <span className="text-sm text-foreground/80">{scheduleLabel}</span>
+ </div>
+ )}
+ <div className="flex items-start gap-3">
+ <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
+ <span className="text-sm text-foreground/80">
+ {selectedAddress?.displayName}{unitNumber && `, Unit ${unitNumber}`}
+ </span>
+ </div>
+ <div className="flex items-start gap-3">
+ {paymentMethod === 'cash' ? (
+ <Banknote className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
+ ) : (
+ <Landmark className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
+ )}
+ <span className="text-sm text-foreground/80">
+ {paymentMethod === 'cash' ? 'Pay with cash'  : 'Pay with e-transfer'}
+ </span>
+ </div>
+ </div>
  </div>
  </div>
 
  {paymentMethod === 'etransfer' && (
- <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 w-full mb-8">
- <div className="flex items-center gap-2 mb-2">
- <Landmark className="w-5 h-5 text-primary"/>
- <span className="font-bold text-foreground">Send your e-transfer to</span>
- </div>
- <p className="text-foreground/80">
+ <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 w-full mb-6 flex items-start gap-3">
+ <Landmark className="w-5 h-5 text-primary shrink-0 mt-0.5"/>
+ <div>
+ <p className="font-bold text-foreground text-sm mb-0.5">Send your e-transfer to</p>
+ <p className="text-foreground/80 text-sm">
  {provider.etransfer_email || 'The provider will contact you with e-transfer details.'}
  </p>
+ </div>
  </div>
  )}
 
  {bookingResponse?.reminder_minutes_before && (
- <div className="bg-card border border-border rounded-2xl p-6 w-full mb-8 flex items-center gap-3 shadow-sm">
- <BellRing className="w-5 h-5 text-primary shrink-0"/>
+ <div className="bg-card border border-border rounded-2xl p-4 w-full mb-6 flex items-center gap-3 shadow-sm">
+ <BellRing className="w-4 h-4 text-primary shrink-0"/>
  <p className="text-foreground/80 text-sm">
  We'll email you a reminder {reminderLabel(bookingResponse.reminder_minutes_before)} your appointment.
  </p>
  </div>
  )}
-
- <p className="text-muted-foreground text-center mb-8 max-w-sm">
- Thank you, <span className="font-semibold text-foreground">{customer.name}</span>. Your service is scheduled. We've sent details to your email.
- </p>
 
  <button
  onClick={() => window.location.reload()}

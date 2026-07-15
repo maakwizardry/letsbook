@@ -33,7 +33,7 @@ class BookingWizardController extends Controller
                 'slug' => $provider->slug,
                 'etransfer_email' => $provider->etransfer_email,
                 'logo_url' => $provider->logo_path ? Storage::url($provider->logo_path) : null,
-                'cover_image_url' => $provider->cover_image_path ? Storage::url($provider->cover_image_path) : null,
+                'cover_image_url' => $provider->cover_image_path ? Storage::url($provider->cover_image_path) : asset('images/default-cover.jpg'),
                 'tagline' => $provider->tagline,
                 'rating' => $provider->rating ? (float) $provider->rating : null,
                 'completed_cleanings_count' => $completedCleanings > 0 ? $completedCleanings : null,

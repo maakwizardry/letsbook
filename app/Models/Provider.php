@@ -105,5 +105,30 @@ class Provider extends Authenticatable
             'category' => 'Add-ons',
             'home_type_id' => null,
         ]);
+
+        $this->seedDefaultAvailability();
+    }
+
+    /**
+     * Default working days (Mon/Wed/Fri, 9am-5pm) given to providers who
+     * haven't configured their own schedule yet. Each day has a midday gap
+     * (12-1pm) so at least one slot shows as unavailable rather than the
+     * whole day being wide open.
+     */
+    public function seedDefaultAvailability(): void
+    {
+        foreach ([1, 3, 5] as $dayOfWeek) {
+            $this->availabilities()->create([
+                'day_of_week' => $dayOfWeek,
+                'start_time' => '09:00',
+                'end_time' => '12:00',
+            ]);
+
+            $this->availabilities()->create([
+                'day_of_week' => $dayOfWeek,
+                'start_time' => '13:00',
+                'end_time' => '17:00',
+            ]);
+        }
     }
 }
