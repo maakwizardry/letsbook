@@ -19,6 +19,7 @@
 @include('emails.partials.booking-items', ['items' => $booking->items, 'total' => $booking->total_quote])
 
 @include('emails.partials.button', ['href' => route('orders'), 'label' => 'View in Dashboard'])
+@include('emails.partials.button', ['href' => $booking->googleCalendarUrl(), 'label' => 'Add to Google Calendar'])
 
 <p style="margin:24px 0 0 0;color:#64748b;font-size:13px;">You're receiving this because a customer booked through your LetsBook page.</p>
 @endsection

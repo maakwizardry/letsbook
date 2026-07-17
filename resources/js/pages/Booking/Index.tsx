@@ -23,8 +23,10 @@ import {
  BellRing,
  Star,
  Hash,
- StickyNote
+ StickyNote,
+ CalendarPlus
 } from 'lucide-react';
+import { buildGoogleCalendarUrl } from '@/lib/google-calendar';
 
 interface SelectedAddress {
  displayName: string;
@@ -175,6 +177,27 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  const timeStr = hour > 12 ? `${hour - 12}:00 PM` : hour === 12 ? '12:00 PM' : `${hour}:00 AM`;
  return `${dateStr} · ${timeStr}`;
  }, [selectedDate, selectedTime]);
+
+ const googleCalendarUrl = useMemo(() => {
+ if (!selectedDate || !selectedTime) return null;
+
+ const start = new Date(`${selectedDate}T${selectedTime}:00`);
+ const details = Object.entries(cart)
+ .map(([id, qty]) => {
+ const item = serviceItems.find(s => s.id === parseInt(id));
+ return item ? `${qty}x ${item.name}` : null;
+ })
+ .filter(Boolean)
+ .join(', ');
+ const location = selectedAddress ? `${selectedAddress.displayName}${unitNumber ? `, Unit ${unitNumber}` : ''}` : undefined;
+
+ return buildGoogleCalendarUrl({
+ title: `Cleaning — ${provider.name}`,
+ start,
+ details,
+ location,
+ });
+ }, [selectedDate, selectedTime, cart, serviceItems, selectedAddress, unitNumber, provider.name]);
 
  const submitBooking = async () => {
  setIsSubmitting(true);
@@ -1058,6 +1081,18 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  We'll email you a reminder {reminderLabel(bookingResponse.reminder_minutes_before)} your appointment.
  </p>
  </div>
+ )}
+
+ {googleCalendarUrl && (
+ <a
+ href={googleCalendarUrl}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="w-full mb-3 py-4 bg-card border border-border text-foreground font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+ >
+ <CalendarPlus className="w-4 h-4"/>
+ Add to Google Calendar
+ </a>
  )}
 
  <button

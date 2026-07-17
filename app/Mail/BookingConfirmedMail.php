@@ -17,7 +17,8 @@ class BookingConfirmedMail extends Mailable
         $address = trim($this->booking->customer->address
             .($this->booking->customer->unit_number ? ', Unit '.$this->booking->customer->unit_number : ''));
 
-        $mail = $this->subject('Your booking with '.$this->booking->provider->name.' is confirmed')
+        $mail = $this->mailer('outreach')
+            ->subject('Your booking with '.$this->booking->provider->name.' is confirmed')
             ->view('emails.booking-confirmed')
             ->with([
                 'booking' => $this->booking,

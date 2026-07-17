@@ -10,8 +10,11 @@ class Booking extends Model
     use HasFactory;
 
     public const STATUS_PENDING = 'Pending';
+
     public const STATUS_IN_PROGRESS = 'In Progress';
+
     public const STATUS_COMPLETED = 'Completed';
+
     public const STATUS_CANCELLED = 'Cancelled';
 
     public const STATUSES = [
@@ -64,5 +67,29 @@ class Booking extends Model
     public function items()
     {
         return $this->hasMany(BookingItem::class);
+    }
+
+    /**
+     * Google Calendar "add event" link for this booking. Assumes a 2-hour
+     * job duration (not tracked anywhere in the schema) and treats
+     * scheduled_at as a floating local time (no schema-tracked timezone),
+     * so it deliberately omits the "Z" UTC suffix Google would otherwise
+     * use to convert the displayed time to the viewer's timezone.
+     */
+    public function googleCalendarUrl(): string
+    {
+        $start = $this->scheduled_at;
+        $end = $start->clone()->addHours(2);
+
+        $details = $this->items->map(fn (BookingItem $item) => $item->serviceItem->name)->implode(', ');
+        $location = trim($this->customer->address.($this->customer->unit_number ? ', Unit '.$this->customer->unit_number : ''));
+
+        return 'https://calendar.google.com/calendar/render?'.http_build_query([
+            'action' => 'TEMPLATE',
+            'text' => 'Cleaning — '.$this->provider->name,
+            'dates' => $start->format('Ymd\THis').'/'.$end->format('Ymd\THis'),
+            'details' => $details,
+            'location' => $location,
+        ]);
     }
 }

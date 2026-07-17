@@ -17,7 +17,8 @@ class NewBookingMail extends Mailable
         $address = trim($this->booking->customer->address
             .($this->booking->customer->unit_number ? ', Unit '.$this->booking->customer->unit_number : ''));
 
-        return $this->subject('New booking received — '.$this->booking->reference_id)
+        return $this->mailer('outreach')
+            ->subject('New booking received — '.$this->booking->reference_id)
             ->view('emails.new-booking')
             ->with([
                 'booking' => $this->booking,

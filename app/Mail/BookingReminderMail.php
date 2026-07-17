@@ -17,7 +17,8 @@ class BookingReminderMail extends Mailable
         $address = trim($this->booking->customer->address
             .($this->booking->customer->unit_number ? ', Unit '.$this->booking->customer->unit_number : ''));
 
-        $mail = $this->subject('Reminder: your booking with '.$this->booking->provider->name.' is coming up')
+        $mail = $this->mailer('outreach')
+            ->subject('Reminder: your booking with '.$this->booking->provider->name.' is coming up')
             ->view('emails.booking-reminder')
             ->with([
                 'booking' => $this->booking,

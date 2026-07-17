@@ -21,7 +21,8 @@ class BookingStatusUpdatedMail extends Mailable
         $address = trim($this->booking->customer->address
             .($this->booking->customer->unit_number ? ', Unit '.$this->booking->customer->unit_number : ''));
 
-        $mail = $this->subject($subject)
+        $mail = $this->mailer('outreach')
+            ->subject($subject)
             ->view('emails.booking-status-updated')
             ->with([
                 'booking' => $this->booking,

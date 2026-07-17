@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
-import { Banknote, CalendarRange, Check, Landmark, PackageCheck, X } from 'lucide-react';
+import { Banknote, CalendarPlus, CalendarRange, Check, Landmark, PackageCheck, X } from 'lucide-react';
+import { buildGoogleCalendarUrl, parseFloatingIsoDateTime } from '@/lib/google-calendar';
 
 const breadcrumbs: BreadcrumbItem[] = [
  { title: 'Orders', href: '/orders' },
@@ -54,6 +55,15 @@ const STATUS_STYLES: Record<string, string> = {
 function formatScheduled(iso: string) {
  const d = new Date(iso);
  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function bookingCalendarUrl(booking: Booking) {
+ return buildGoogleCalendarUrl({
+ title: `Cleaning — ${booking.customer?.name ?? booking.reference_id}`,
+ start: parseFloatingIsoDateTime(booking.scheduled_at),
+ details: `${booking.home_type?.label ?? ''} · ${booking.items_count} item${booking.items_count === 1 ? '' : 's'}`.trim(),
+ location: booking.customer?.address ? `${booking.customer.address}${booking.customer.unit_number ? `, Unit ${booking.customer.unit_number}` : ''}` : undefined,
+ });
 }
 
 function toISODate(d: Date) {
@@ -358,6 +368,15 @@ export default function Orders({ bookings, statuses, filters }: { bookings: Book
  {booking.is_paid && <Check className="w-3.5 h-3.5"/>}
  {booking.is_paid ? 'Paid' : 'Mark Paid'}
  </button>
+ <a
+ href={bookingCalendarUrl(booking)}
+ target="_blank"
+ rel="noopener noreferrer"
+ title="Add to Google Calendar"
+ className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+ >
+ <CalendarPlus className="w-4 h-4"/>
+ </a>
  </div>
  </div>
  );
@@ -378,6 +397,7 @@ export default function Orders({ bookings, statuses, filters }: { bookings: Book
  <th className="px-4 py-3 whitespace-nowrap">Payment</th>
  <th className="px-4 py-3 whitespace-nowrap">Status</th>
  <th className="px-4 py-3 whitespace-nowrap">Paid</th>
+ <th className="px-4 py-3 whitespace-nowrap"><span className="sr-only">Calendar</span></th>
  </tr>
  </thead>
  <tbody className="divide-y divide-border">
@@ -427,6 +447,17 @@ export default function Orders({ bookings, statuses, filters }: { bookings: Book
  {booking.is_paid && <Check className="w-3.5 h-3.5"/>}
  {booking.is_paid ? 'Paid' : 'Mark as Paid'}
  </button>
+ </td>
+ <td className="px-4 py-3 whitespace-nowrap">
+ <a
+ href={bookingCalendarUrl(booking)}
+ target="_blank"
+ rel="noopener noreferrer"
+ title="Add to Google Calendar"
+ className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+ >
+ <CalendarPlus className="w-4 h-4"/>
+ </a>
  </td>
  </tr>
  );

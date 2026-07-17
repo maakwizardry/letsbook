@@ -16,5 +16,7 @@
 
 @include('emails.partials.booking-items', ['items' => $booking->items, 'total' => $booking->total_quote])
 
+@include('emails.partials.button', ['href' => $booking->googleCalendarUrl(), 'label' => 'Add to Google Calendar'])
+
 <p style="margin:24px 0 0 0;">We'll email you again as soon as your cleaning starts. If anything needs to change, just reply to this email and {{ $booking->provider->name }} will get back to you.</p>
 @endsection

@@ -14,7 +14,8 @@ class BookingPaymentConfirmedMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Payment recorded — '.$this->booking->reference_id)
+        return $this->mailer('outreach')
+            ->subject('Payment recorded — '.$this->booking->reference_id)
             ->view('emails.booking-payment-confirmed')
             ->with(['booking' => $this->booking]);
     }

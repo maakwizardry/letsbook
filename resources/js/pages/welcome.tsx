@@ -19,6 +19,7 @@ import {
  CheckCircle2,
  Clock3,
  Mail,
+ CalendarPlus,
 } from 'lucide-react';
 import { DashboardIcon } from '@/components/icons/dashboard-icon';
 
@@ -125,70 +126,78 @@ const TOUR_TABS = [
  key: 'dashboard',
  label: 'Dashboard',
  icon: DashboardIcon,
+ color: 'bg-primary/10 text-primary',
+ eyebrow: 'Every morning',
  image: '/images/dashboard.jpeg',
  imageWidth: 1400,
  imageHeight: 686,
  url: 'letsbook.app/dashboard',
  title: 'Your business, at a glance',
- description: "Revenue, outstanding balances, completion rate, and order status — updated the moment a booking comes in. No spreadsheets, no guessing.",
+ description: "You open your dashboard and see exactly where things stand — revenue, what's outstanding, and how many jobs need attention today. No spreadsheets, no guessing.",
  points: ['Total & monthly revenue', 'Outstanding payments to collect', 'Orders broken down by status', 'Cash vs. e-transfer split'],
  },
  {
  key: 'orders',
  label: 'Orders',
  icon: ClipboardList,
+ color: 'bg-chart-4/10 text-chart-4',
+ eyebrow: 'Throughout the day',
  image: '/images/orders.jpeg',
  imageWidth: 1400,
  imageHeight: 684,
  url: 'letsbook.app/orders',
  title: 'Every booking, organized',
- description: 'Filter by status, payment, or date range. See the customer, home type, schedule, and total for every job — and update status in one click.',
+ description: 'As bookings come in, you check Orders to see who’s booked, when, and for what — filter by status or payment, and update a job the moment it’s done.',
  points: ['Filter by status, payment & date', "Customer name and phone on every row", 'Update job status right from the list'],
  },
  {
  key: 'availability',
  label: 'Availability',
  icon: CalendarClock,
+ color: 'bg-chart-2/10 text-chart-2',
+ eyebrow: 'Once, at signup',
  image: '/images/availability.jpeg',
  imageWidth: 1280,
  imageHeight: 626,
  url: 'letsbook.app/availability',
  title: 'Set your hours once',
- description: "Toggle the days you work and set custom hours per day. Customers only ever see times you're actually free.",
+ description: "You set your working hours a single time. From then on, customers only ever see times you're actually free — no double-bookings, ever.",
  points: ['Turn any day on or off', 'Multiple time ranges per day', 'Changes reflect instantly on your booking page'],
  },
 ] as const;
 
 function ProductTour() {
- const [active, setActive] = useState<(typeof TOUR_TABS)[number]['key']>('dashboard');
- const tab = TOUR_TABS.find((t) => t.key === active)!;
-
  return (
- <section className="max-w-6xl mx-auto px-5 py-16 lg:py-20">
- <div className="text-center mb-10">
+ <section className="max-w-5xl mx-auto px-5 py-16 lg:py-20">
+ <div className="text-center mb-16">
  <h2 className="text-3xl font-black font-heading text-foreground mb-2">See exactly what you'll get</h2>
- <p className="text-muted-foreground max-w-lg mx-auto">Peek inside the dashboard your business will run on, before you sign up.</p>
+ <p className="text-muted-foreground max-w-lg mx-auto">A day running your business on LetsBook, from open to close.</p>
  </div>
 
- <div className="flex justify-center gap-2 mb-10 flex-wrap">
- {TOUR_TABS.map((t) => (
- <button
- key={t.key}
- onClick={() => setActive(t.key)}
- className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
- active === t.key
- ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
- : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
- }`}
- >
- <t.icon className="w-4 h-4"/>
- {t.label}
- </button>
+ <div className="space-y-16 lg:space-y-24">
+ {TOUR_TABS.map((tab, i) => (
+ <div key={tab.key} className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
+ <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+ <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${tab.color}`}>
+ <tab.icon className="w-5 h-5"/>
+ </div>
+ <span className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">{tab.eyebrow}</span>
+ <h3 className="text-2xl font-black font-heading text-foreground mb-3">{tab.title}</h3>
+ <p className="text-muted-foreground leading-relaxed mb-6">{tab.description}</p>
+ <ul className="space-y-3">
+ {tab.points.map((point) => (
+ <li key={point} className="flex items-start gap-3 text-foreground">
+ <span className="w-5 h-5 rounded-full bg-success/15 flex items-center justify-center shrink-0 mt-0.5">
+ <Check className="w-3 h-3 text-success"/>
+ </span>
+ <span className="text-sm font-medium">{point}</span>
+ </li>
  ))}
+ </ul>
  </div>
 
- <div className="grid lg:grid-cols-5 gap-10 lg:gap-14 items-center">
- <div key={tab.key} className="lg:col-span-3 relative animate-in fade-in zoom-in-95 duration-300">
+ <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
+ <div className="relative">
  <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 via-chart-4/10 to-chart-2/20 rounded-[2.5rem] blur-2xl" aria-hidden="true"/>
  <div className="relative bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
  <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-muted/50">
@@ -208,21 +217,9 @@ function ProductTour() {
  />
  </div>
  </div>
-
- <div key={`${tab.key}-copy`} className="lg:col-span-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
- <h3 className="text-2xl font-black font-heading text-foreground mb-3">{tab.title}</h3>
- <p className="text-muted-foreground leading-relaxed mb-6">{tab.description}</p>
- <ul className="space-y-3">
- {tab.points.map((point) => (
- <li key={point} className="flex items-start gap-3 text-foreground">
- <span className="w-5 h-5 rounded-full bg-success/15 flex items-center justify-center shrink-0 mt-0.5">
- <Check className="w-3 h-3 text-success"/>
- </span>
- <span className="text-sm font-medium">{point}</span>
- </li>
- ))}
- </ul>
  </div>
+ </div>
+ ))}
  </div>
  </section>
  );
@@ -233,19 +230,19 @@ const EMAIL_STORY = [
  key: 'booking-confirmed',
  audience: 'customer' as const,
  subject: 'Your booking is confirmed',
- narrative: "Jordan books a cleaning through Sparkle Clean Co.'s page. Within seconds, a confirmation lands in their inbox — the date, the address, and every service itemized, so there's no surprise later.",
+ narrative: "Jordan books a cleaning through Sparkle Clean Co.'s page. Within seconds, a confirmation lands in their inbox — the date, the address, and every service itemized, so there's no surprise later. One tap adds it straight to Jordan's Google Calendar.",
  image: '/images/emails/booking-confirmed.webp',
  width: 900,
- height: 1226,
+ height: 1325,
  },
  {
  key: 'new-booking',
  audience: 'provider' as const,
  subject: 'New booking received',
- narrative: 'At the very same moment, Sparkle Clean Co. gets notified too — customer details, address, and a link straight into their dashboard. No missed calls, no double-booking.',
+ narrative: 'At the very same moment, Sparkle Clean Co. gets notified too — customer details, address, a link straight into their dashboard, and their own one-tap link to add the job to Google Calendar. No missed calls, no double-booking.',
  image: '/images/emails/new-booking.webp',
  width: 900,
- height: 1333,
+ height: 1431,
  },
  {
  key: 'reminder',
@@ -529,13 +526,14 @@ export default function Welcome() {
  <h2 className="text-3xl font-black font-heading text-foreground mb-2">Everything you need to get booked</h2>
  <p className="text-muted-foreground max-w-lg mx-auto">One simple tool. No monthly fees, no learning curve.</p>
  </div>
- <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+ <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
  <FeatureCard icon={Link2} color="bg-primary/10 text-primary" title="Share Anywhere" description="Send your booking link by text, or embed it right on your website."/>
  <FeatureCard icon={MapPin} color="bg-chart-4/10 text-chart-4" title="Address Verification" description="Customers confirm their exact address so your team always knows where to go."/>
  <FeatureCard icon={CalendarClock} color="bg-chart-2/10 text-chart-2" title="Smart Scheduling" description="Customers only see times you're actually free. No double-bookings, ever."/>
  <FeatureCard icon={DashboardIcon} color="bg-chart-3/10 text-chart-3" title="One Dashboard" description="Every booking, customer, and job detail lives in a single, simple view."/>
  <FeatureCard icon={BellRing} color="bg-chart-5/10 text-chart-5" title="Automatic Reminders" description="Customers get reminded automatically, so you get fewer no-shows."/>
  <FeatureCard icon={Wallet} color="bg-success/10 text-success" title="Cash & E-transfer" description="Built-in support for how home cleaning businesses actually get paid."/>
+ <FeatureCard icon={CalendarPlus} color="bg-chart-2/10 text-chart-2" title="Add to Calendar" description="Every booking includes a one-tap link to add it to Google Calendar — for reminders and easier day-to-day scheduling."/>
  </div>
  </section>
 
