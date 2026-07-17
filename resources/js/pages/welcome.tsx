@@ -6,7 +6,6 @@ import {
  SprayCan,
  Link2,
  CalendarClock,
- LayoutDashboard,
  BellRing,
  Wallet,
  MapPin,
@@ -20,6 +19,7 @@ import {
  CheckCircle2,
  Clock3,
 } from 'lucide-react';
+import { DashboardIcon } from '@/components/icons/dashboard-icon';
 
 function Skeleton({ className }: { className: string }) {
  return <div className={`skeleton-shimmer rounded-md bg-muted ${className}`} />;
@@ -119,6 +119,100 @@ function BookingDemoCard() {
  );
 }
 
+const TOUR_TABS = [
+ {
+ key: 'dashboard',
+ label: 'Dashboard',
+ icon: DashboardIcon,
+ image: '/images/dashboard.jpeg',
+ url: 'letsbook.app/dashboard',
+ title: 'Your business, at a glance',
+ description: "Revenue, outstanding balances, completion rate, and order status — updated the moment a booking comes in. No spreadsheets, no guessing.",
+ points: ['Total & monthly revenue', 'Outstanding payments to collect', 'Orders broken down by status', 'Cash vs. e-transfer split'],
+ },
+ {
+ key: 'orders',
+ label: 'Orders',
+ icon: ClipboardList,
+ image: '/images/orders.jpeg',
+ url: 'letsbook.app/orders',
+ title: 'Every booking, organized',
+ description: 'Filter by status, payment, or date range. See the customer, home type, schedule, and total for every job — and update status in one click.',
+ points: ['Filter by status, payment & date', "Customer name and phone on every row", 'Update job status right from the list'],
+ },
+ {
+ key: 'availability',
+ label: 'Availability',
+ icon: CalendarClock,
+ image: '/images/availability.jpeg',
+ url: 'letsbook.app/availability',
+ title: 'Set your hours once',
+ description: "Toggle the days you work and set custom hours per day. Customers only ever see times you're actually free.",
+ points: ['Turn any day on or off', 'Multiple time ranges per day', 'Changes reflect instantly on your booking page'],
+ },
+] as const;
+
+function ProductTour() {
+ const [active, setActive] = useState<(typeof TOUR_TABS)[number]['key']>('dashboard');
+ const tab = TOUR_TABS.find((t) => t.key === active)!;
+
+ return (
+ <section className="max-w-6xl mx-auto px-5 py-16 lg:py-20">
+ <div className="text-center mb-10">
+ <h2 className="text-3xl font-black font-heading text-foreground mb-2">See exactly what you'll get</h2>
+ <p className="text-muted-foreground max-w-lg mx-auto">Peek inside the dashboard your business will run on, before you sign up.</p>
+ </div>
+
+ <div className="flex justify-center gap-2 mb-10 flex-wrap">
+ {TOUR_TABS.map((t) => (
+ <button
+ key={t.key}
+ onClick={() => setActive(t.key)}
+ className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+ active === t.key
+ ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+ : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
+ }`}
+ >
+ <t.icon className="w-4 h-4"/>
+ {t.label}
+ </button>
+ ))}
+ </div>
+
+ <div className="grid lg:grid-cols-5 gap-10 lg:gap-14 items-center">
+ <div key={tab.key} className="lg:col-span-3 relative animate-in fade-in zoom-in-95 duration-300">
+ <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 via-chart-4/10 to-chart-2/20 rounded-[2.5rem] blur-2xl" aria-hidden="true"/>
+ <div className="relative bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
+ <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-muted/50">
+ <span className="w-2.5 h-2.5 rounded-full bg-destructive/40"/>
+ <span className="w-2.5 h-2.5 rounded-full bg-chart-3/40"/>
+ <span className="w-2.5 h-2.5 rounded-full bg-success/40"/>
+ <span className="ml-3 text-xs font-medium text-muted-foreground truncate">{tab.url}</span>
+ </div>
+ <img src={tab.image} alt={`${tab.label} screenshot`} className="w-full h-auto block"/>
+ </div>
+ </div>
+
+ <div key={`${tab.key}-copy`} className="lg:col-span-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+ <h3 className="text-2xl font-black font-heading text-foreground mb-3">{tab.title}</h3>
+ <p className="text-muted-foreground leading-relaxed mb-6">{tab.description}</p>
+ <ul className="space-y-3">
+ {tab.points.map((point) => (
+ <li key={point} className="flex items-start gap-3 text-foreground">
+ <span className="w-5 h-5 rounded-full bg-success/15 flex items-center justify-center shrink-0 mt-0.5">
+ <Check className="w-3 h-3 text-success"/>
+ </span>
+ <span className="text-sm font-medium">{point}</span>
+ </li>
+ ))}
+ </ul>
+ </div>
+ </div>
+ </section>
+ );
+}
+
 function FeatureCard({ icon: Icon, color, title, description }: { icon: React.ComponentType<{ className?: string }>; color: string; title: string; description: string }) {
  return (
  <div className="group bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
@@ -139,6 +233,9 @@ export default function Welcome() {
  <Head title="Effortless Online Booking for Home Cleaning Businesses">
  <link rel="preconnect"href="https://fonts.bunny.net"/>
  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|lexend:500,600,700,800"rel="stylesheet"/>
+ <link rel="preload" as="image" href="/images/dashboard.jpeg" fetchpriority="low"/>
+ <link rel="preload" as="image" href="/images/orders.jpeg" fetchpriority="low"/>
+ <link rel="preload" as="image" href="/images/availability.jpeg" fetchpriority="low"/>
  </Head>
 
  <div className="min-h-dvh bg-background font-sans overflow-x-hidden">
@@ -246,7 +343,7 @@ export default function Welcome() {
  {[
  { icon: Share2, text: 'Share one booking link, anywhere' },
  { icon: CalendarClock, text: 'Customers pick an open time instantly' },
- { icon: LayoutDashboard, text: 'Every booking lands in one dashboard' },
+ { icon: DashboardIcon, text: 'Every booking lands in one dashboard' },
  ].map((item, i) => (
  <li key={i} className="flex items-start gap-3 text-foreground font-medium">
  <item.icon className="w-5 h-5 shrink-0 mt-0.5 text-primary"/>
@@ -268,11 +365,13 @@ export default function Welcome() {
  <FeatureCard icon={Link2} color="bg-primary/10 text-primary" title="Share Anywhere" description="Send your booking link by text, or embed it right on your website."/>
  <FeatureCard icon={MapPin} color="bg-chart-4/10 text-chart-4" title="Address Verification" description="Customers confirm their exact address so your team always knows where to go."/>
  <FeatureCard icon={CalendarClock} color="bg-chart-2/10 text-chart-2" title="Smart Scheduling" description="Customers only see times you're actually free. No double-bookings, ever."/>
- <FeatureCard icon={LayoutDashboard} color="bg-chart-3/10 text-chart-3" title="One Dashboard" description="Every booking, customer, and job detail lives in a single, simple view."/>
+ <FeatureCard icon={DashboardIcon} color="bg-chart-3/10 text-chart-3" title="One Dashboard" description="Every booking, customer, and job detail lives in a single, simple view."/>
  <FeatureCard icon={BellRing} color="bg-chart-5/10 text-chart-5" title="Automatic Reminders" description="Customers get reminded automatically, so you get fewer no-shows."/>
  <FeatureCard icon={Wallet} color="bg-success/10 text-success" title="Cash & E-transfer" description="Built-in support for how home cleaning businesses actually get paid."/>
  </div>
  </section>
+
+ <ProductTour/>
 
  {/* How it works */}
  <section id="how-it-works" className="max-w-6xl mx-auto px-5 py-16 lg:py-20">

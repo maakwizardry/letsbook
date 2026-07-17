@@ -1,0 +1,3 @@
+curl -X POST http://localhost:8000/api/generate-ai-girl \
+  -H "Content-Type: application/json" \
+  -d '{"scene": "walking in Paris street", "outfit": "white summer dress"}'

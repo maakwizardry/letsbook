@@ -1,0 +1,3 @@
+curl -X POST https://letsbook.maakhq.com/api/ai/generate-image/openai \
+  -H "Content-Type: application/json" \
+  -d '{"scene": "The girl is coming out of college, walking home with her friend, laughing and smiling. She is wearing a red top and yellow pants."}'

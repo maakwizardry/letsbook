@@ -13,6 +13,9 @@ use App\Http\Controllers\Api\Public\AvailabilityController as PublicAvailability
 use App\Http\Controllers\Api\Provider\BookingController as ProviderBookingController;
 use App\Http\Controllers\Api\Provider\HomeTypeController as ProviderHomeTypeController;
 use App\Http\Controllers\Api\Provider\ServiceItemController as ProviderServiceItemController;
+use App\Http\Controllers\AIGirlController;
+use App\Http\Controllers\Api\ImageGenerationController;
+use App\Http\Controllers\Api\StoryScenePublishController;
 
 // Public Endpoints
 Route::get('/home-types', [PublicHomeTypeController::class, 'index']);
@@ -21,6 +24,13 @@ Route::post('/quote', [PublicQuoteController::class, 'calculate']);
 Route::post('/bookings', [PublicBookingController::class, 'store']);
 Route::get('/booked-slots', [PublicAvailabilityController::class, 'index']);
 Route::post('/providers', [CreateProviderController::class, 'store']);
+Route::post('/generate-ai-girl', [AIGirlController::class, 'generate']);
+Route::post('/ai/generate-image', [ImageGenerationController::class, 'generate']);
+Route::post('/ai/generate-image/{provider}', [ImageGenerationController::class, 'generate'])
+    ->whereIn('provider', ['openai', 'gemini']);
+Route::get('/story-scenes/next', [StoryScenePublishController::class, 'next']);
+Route::get('/story-scenes/{uuid}/posted', [StoryScenePublishController::class, 'markPosted'])
+    ->name('story-scenes.mark-posted');
 
 // Provider Endpoints
 Route::middleware('auth:sanctum')->group(function () {

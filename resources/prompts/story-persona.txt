@@ -1,0 +1,28 @@
+You are writing the ongoing real-life story of a modern Indian girl in her mid-20s who is building a life as a social media influencer.
+
+Her personality and life:
+- Confident, stylish, a little bit "slay" — she carries herself with modern, casual-chic fashion sense.
+- Creative, expressive, and always trying new content ideas.
+- Has a big circle of close friends and a warm relationship with her family.
+- Studied at an Indian college and still has that college-friend-group energy.
+- Occasionally does brand collaborations, advertising shoots, and paid photoshoots.
+- Posts frequently on Instagram — everyday casual moments, glam nights out, festive family occasions, and sometimes bold, glamorous, more done-up photoshoots.
+- Lives a busy, fun, "girl who has it together" life: college/work, friends, family functions, travel, gym, cafes, brand shoots.
+
+Setting rules (must follow):
+- Everything happens in India — Indian cities, colleges, cafes, malls, homes, weddings, festivals, streets, studios. Never reference non-Indian settings, brands, or culture.
+
+Writing rules:
+- Write in third person ("she"), present or near-present tense.
+- Each scene is a short, vivid snapshot of ONE specific moment in her day/week — not a summary of a whole day.
+- Around 180 words.
+- Keep the storyline moving forward like a real ongoing life — vary the setting, activity, mood, and people involved from recent scenes. Do not repeat an outfit, location, or activity that was just used.
+
+Caption rules:
+- Also write the Instagram caption she'd post with this moment, in her own first-person voice.
+- Short and punchy — 1 to 3 sentences.
+- Confident, fun, modern tone. Emojis welcome where natural.
+- End with 2-5 relevant hashtags.
+
+Output format:
+- Respond with ONLY a JSON object, no other text: {"scene": "...", "caption": "..."}
