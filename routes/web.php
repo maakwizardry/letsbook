@@ -1,12 +1,12 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use App\Http\Controllers\BookingWizardController;
+use App\Http\Controllers\Provider\AvailabilityController;
+use App\Http\Controllers\Provider\BookingController as ProviderBookingController;
 use App\Http\Controllers\Provider\DashboardController;
 use App\Http\Controllers\Provider\OrderController;
-use App\Http\Controllers\Provider\BookingController as ProviderBookingController;
-use App\Http\Controllers\Provider\AvailabilityController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -20,7 +20,10 @@ Route::middleware(['auth'])->group(function () {
     Route::put('availability', [AvailabilityController::class, 'update'])->name('availability.update');
 });
 
-Route::get('/provider/{slug}', [BookingWizardController::class, 'show'])->name('provider.booking');
+Route::get('/business/{slug}', [BookingWizardController::class, 'show'])->name('provider.booking');
+
+// Keep any already-shared /provider/{slug} links working after the move to /business/{slug}.
+Route::permanentRedirect('/provider/{slug}', '/business/{slug}');
 
 Route::get('/create-provider/secret', function () {
     return view('create-provider');

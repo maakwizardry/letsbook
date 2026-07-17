@@ -1,18 +1,22 @@
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
 import {
  AlertCircle,
  Banknote,
  CalendarClock,
  CalendarDays,
+ Check,
  CheckCircle2,
  CircleDollarSign,
+ Copy,
+ ExternalLink,
  Landmark,
+ Link2,
  ListChecks,
  Wallet,
 } from 'lucide-react';
-import { type ComponentType } from 'react';
+import { type ComponentType, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
  { title: 'Dashboard', href: '/dashboard' },
@@ -80,7 +84,58 @@ function StatTile({
  );
 }
 
+function BookingLinkCard({ url }: { url: string }) {
+ const [copied, setCopied] = useState(false);
+
+ const copy = async () => {
+ try {
+ await navigator.clipboard.writeText(url);
+ setCopied(true);
+ setTimeout(() => setCopied(false), 2000);
+ } catch {
+ // Clipboard API blocked (e.g. insecure context) — user can still select and copy manually.
+ }
+ };
+
+ return (
+ <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+ <div className="mb-3 flex items-center gap-3">
+ <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+ <Link2 className="h-4 w-4"/>
+ </div>
+ <div>
+ <h2 className="text-sm font-semibold text-foreground">Your booking page</h2>
+ <p className="text-xs text-muted-foreground">Share this link with customers so they can book you directly.</p>
+ </div>
+ </div>
+ <div className="flex flex-col gap-2 sm:flex-row">
+ <div className="flex-1 truncate rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">{url}</div>
+ <div className="flex gap-2">
+ <button
+ onClick={copy}
+ className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 sm:flex-none"
+ >
+ {copied ? <Check className="h-4 w-4"/> : <Copy className="h-4 w-4"/>}
+ {copied ? 'Copied' : 'Copy'}
+ </button>
+ <a
+ href={url}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-2 text-foreground hover:bg-accent"
+ title="Open booking page"
+ >
+ <ExternalLink className="h-4 w-4"/>
+ </a>
+ </div>
+ </div>
+ </div>
+ );
+}
+
 export default function Dashboard({ stats }: { stats: Stats }) {
+ const { auth } = usePage<SharedData>().props;
+ const bookingUrl = route('provider.booking', auth.user.slug);
  const statuses = Object.keys(stats.statusCounts);
  const hasOrders = stats.totalOrders > 0;
  const totalPaymentMethods = stats.paymentMethodCounts.cash + stats.paymentMethodCounts.etransfer;
@@ -92,6 +147,10 @@ export default function Dashboard({ stats }: { stats: Stats }) {
  <div className="mb-6">
  <h1 className="text-2xl font-bold font-heading text-foreground">Dashboard</h1>
  <p className="mt-1 text-sm text-muted-foreground">Your business at a glance</p>
+ </div>
+
+ <div className="mb-6">
+ <BookingLinkCard url={bookingUrl}/>
  </div>
 
  {!hasOrders ? (

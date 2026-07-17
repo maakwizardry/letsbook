@@ -9,11 +9,13 @@
             background: #0f172a;
             color: #e2e8f0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
             padding: 24px;
+            gap: 24px;
             box-sizing: border-box;
         }
         .card {
@@ -23,6 +25,25 @@
             border-radius: 12px;
             padding: 32px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .field {
+            margin-bottom: 12px;
+        }
+        .field label {
+            display: block;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .field input {
+            width: 100%;
+            box-sizing: border-box;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
         }
         h1 {
             font-size: 18px;
@@ -82,6 +103,26 @@
         <div class="actions">
             <button id="new-btn">New Provider</button>
             <button id="copy-btn" class="secondary">Copy</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h1>Onboard Provider</h1>
+        <div id="onboard-status" class="status">They've agreed to sign up — enter their real name and email, then copy the welcome message below and send it to them yourself.</div>
+        <div class="field">
+            <label for="onboard-name">Business name</label>
+            <input id="onboard-name" type="text" placeholder="Sparkle Clean Co.">
+        </div>
+        <div class="field">
+            <label for="onboard-email">Email</label>
+            <input id="onboard-email" type="email" placeholder="owner@example.com">
+        </div>
+        <div class="actions">
+            <button id="onboard-btn">Create &amp; Get Message</button>
+        </div>
+        <textarea id="onboard-output" readonly placeholder="The welcome message will appear here..." style="margin-top:16px;"></textarea>
+        <div class="actions">
+            <button id="onboard-copy-btn" class="secondary">Copy</button>
         </div>
     </div>
 
@@ -155,6 +196,68 @@
         });
 
         createProvider();
+
+        const onboardStatusEl = document.getElementById('onboard-status');
+        const onboardNameEl = document.getElementById('onboard-name');
+        const onboardEmailEl = document.getElementById('onboard-email');
+        const onboardBtn = document.getElementById('onboard-btn');
+        const onboardOutputEl = document.getElementById('onboard-output');
+        const onboardCopyBtn = document.getElementById('onboard-copy-btn');
+
+        function setOnboardStatus(text, isError = false) {
+            onboardStatusEl.textContent = text;
+            onboardStatusEl.classList.toggle('error', isError);
+        }
+
+        onboardBtn.addEventListener('click', async () => {
+            const name = onboardNameEl.value.trim();
+            const email = onboardEmailEl.value.trim();
+
+            if (!name || !email) {
+                setOnboardStatus('Enter both a name and an email.', true);
+                return;
+            }
+
+            setOnboardStatus(`Creating "${name}"...`);
+            onboardOutputEl.value = '';
+
+            try {
+                const response = await fetch('/api/providers/onboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                    },
+                    body: JSON.stringify({ name, email }),
+                });
+
+                const data = await response.json();
+
+                if (response.status === 201) {
+                    onboardOutputEl.value = data.message;
+                    setOnboardStatus(`Created "${data.provider.name}". Copy the message below and send it to them yourself.`);
+                } else if (response.status === 422 && data.errors) {
+                    setOnboardStatus(Object.values(data.errors).flat().join('\n'), true);
+                } else {
+                    setOnboardStatus(data.message || 'Something went wrong.', true);
+                }
+            } catch (err) {
+                setOnboardStatus(`Request failed: ${err.message}`, true);
+            }
+        });
+
+        onboardCopyBtn.addEventListener('click', async () => {
+            if (!onboardOutputEl.value) {
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(onboardOutputEl.value);
+                setOnboardStatus('Copied to clipboard.');
+            } catch (err) {
+                onboardOutputEl.select();
+                setOnboardStatus('Press Ctrl+C / Cmd+C to copy (clipboard API blocked).');
+            }
+        });
     </script>
 </body>
 </html>

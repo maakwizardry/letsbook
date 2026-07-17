@@ -24,6 +24,7 @@ Route::post('/quote', [PublicQuoteController::class, 'calculate']);
 Route::post('/bookings', [PublicBookingController::class, 'store']);
 Route::get('/booked-slots', [PublicAvailabilityController::class, 'index']);
 Route::post('/providers', [CreateProviderController::class, 'store']);
+Route::post('/providers/onboard', [CreateProviderController::class, 'onboard']);
 Route::post('/generate-ai-girl', [AIGirlController::class, 'generate']);
 Route::post('/ai/generate-image', [ImageGenerationController::class, 'generate']);
 Route::post('/ai/generate-image/{provider}', [ImageGenerationController::class, 'generate'])

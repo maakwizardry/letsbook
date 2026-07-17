@@ -29,4 +29,19 @@ class CreateProviderController extends Controller
             'message' => $result['message'],
         ], 201);
     }
+
+    public function onboard(Request $request, ProviderOnboardingService $onboarding)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+        ]);
+
+        $result = $onboarding->onboard($validated['name'], $validated['email']);
+
+        return response()->json([
+            'provider' => $result['provider'],
+            'message' => $result['message'],
+        ], 201);
+    }
 }
