@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookingWizardController;
 use App\Http\Controllers\Provider\AvailabilityController;
 use App\Http\Controllers\Provider\BookingController as ProviderBookingController;
+use App\Http\Controllers\Provider\CustomerController;
 use App\Http\Controllers\Provider\DashboardController;
 use App\Http\Controllers\Provider\OrderController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,8 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('orders', [OrderController::class, 'index'])->name('orders');
+    Route::get('customers', [CustomerController::class, 'index'])->name('customers');
+    Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     Route::patch('bookings/{booking}', [ProviderBookingController::class, 'update'])->name('bookings.update');
     Route::get('availability', [AvailabilityController::class, 'index'])->name('availability');
     Route::put('availability', [AvailabilityController::class, 'update'])->name('availability.update');
