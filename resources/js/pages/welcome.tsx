@@ -18,6 +18,7 @@ import {
  Share2,
  CheckCircle2,
  Clock3,
+ Mail,
 } from 'lucide-react';
 import { DashboardIcon } from '@/components/icons/dashboard-icon';
 
@@ -125,6 +126,8 @@ const TOUR_TABS = [
  label: 'Dashboard',
  icon: DashboardIcon,
  image: '/images/dashboard.jpeg',
+ imageWidth: 1400,
+ imageHeight: 686,
  url: 'letsbook.app/dashboard',
  title: 'Your business, at a glance',
  description: "Revenue, outstanding balances, completion rate, and order status — updated the moment a booking comes in. No spreadsheets, no guessing.",
@@ -135,6 +138,8 @@ const TOUR_TABS = [
  label: 'Orders',
  icon: ClipboardList,
  image: '/images/orders.jpeg',
+ imageWidth: 1400,
+ imageHeight: 684,
  url: 'letsbook.app/orders',
  title: 'Every booking, organized',
  description: 'Filter by status, payment, or date range. See the customer, home type, schedule, and total for every job — and update status in one click.',
@@ -145,6 +150,8 @@ const TOUR_TABS = [
  label: 'Availability',
  icon: CalendarClock,
  image: '/images/availability.jpeg',
+ imageWidth: 1280,
+ imageHeight: 626,
  url: 'letsbook.app/availability',
  title: 'Set your hours once',
  description: "Toggle the days you work and set custom hours per day. Customers only ever see times you're actually free.",
@@ -190,7 +197,15 @@ function ProductTour() {
  <span className="w-2.5 h-2.5 rounded-full bg-success/40"/>
  <span className="ml-3 text-xs font-medium text-muted-foreground truncate">{tab.url}</span>
  </div>
- <img src={tab.image} alt={`${tab.label} screenshot`} className="w-full h-auto block"/>
+ <img
+ src={tab.image}
+ alt={`${tab.label} screenshot`}
+ width={tab.imageWidth}
+ height={tab.imageHeight}
+ loading="lazy"
+ decoding="async"
+ className="w-full h-auto block"
+ />
  </div>
  </div>
 
@@ -213,6 +228,138 @@ function ProductTour() {
  );
 }
 
+const EMAIL_STORY = [
+ {
+ key: 'booking-confirmed',
+ audience: 'customer' as const,
+ subject: 'Your booking is confirmed',
+ narrative: "Jordan books a cleaning through Sparkle Clean Co.'s page. Within seconds, a confirmation lands in their inbox — the date, the address, and every service itemized, so there's no surprise later.",
+ image: '/images/emails/booking-confirmed.webp',
+ width: 900,
+ height: 1226,
+ },
+ {
+ key: 'new-booking',
+ audience: 'provider' as const,
+ subject: 'New booking received',
+ narrative: 'At the very same moment, Sparkle Clean Co. gets notified too — customer details, address, and a link straight into their dashboard. No missed calls, no double-booking.',
+ image: '/images/emails/new-booking.webp',
+ width: 900,
+ height: 1333,
+ },
+ {
+ key: 'reminder',
+ audience: 'customer' as const,
+ subject: 'Booking reminder',
+ narrative: "As the appointment gets closer, Jordan gets a friendly nudge — so nobody forgets, and nobody's left waiting on the day.",
+ image: '/images/emails/booking-reminder.webp',
+ width: 900,
+ height: 1194,
+ },
+ {
+ key: 'in-progress',
+ audience: 'customer' as const,
+ subject: 'Your cleaning has started',
+ narrative: 'On the day, the moment the team marks the job underway, Jordan knows the cleaning has actually started.',
+ image: '/images/emails/status-in-progress.webp',
+ width: 900,
+ height: 1059,
+ },
+ {
+ key: 'completed',
+ audience: 'customer' as const,
+ subject: 'Your cleaning is complete',
+ narrative: 'When the job wraps up, Jordan gets a recap of everything that was done — and a thank-you from Sparkle Clean Co.',
+ image: '/images/emails/status-completed.webp',
+ width: 900,
+ height: 1141,
+ },
+ {
+ key: 'payment',
+ audience: 'provider' as const,
+ subject: 'Payment recorded',
+ narrative: "Once payment's marked received, Sparkle Clean Co. gets a clean, itemized receipt for their own records. Nothing to track down later.",
+ image: '/images/emails/payment-confirmed.webp',
+ width: 900,
+ height: 1208,
+ },
+];
+
+function EmailStory() {
+ return (
+ <section className="max-w-5xl mx-auto px-5 py-16 lg:py-20">
+ <div className="text-center mb-14">
+ <h2 className="text-3xl font-black font-heading text-foreground mb-2">A booking's story, told in emails</h2>
+ <p className="text-muted-foreground max-w-lg mx-auto">Follow one real booking from click to completion — every email your business and your customer actually receive, sent automatically.</p>
+ </div>
+
+ <div className="relative">
+ <div className="hidden lg:block absolute left-1/2 top-0 bottom-0 w-px bg-border -translate-x-1/2" aria-hidden="true"/>
+
+ <div className="space-y-16 lg:space-y-24">
+ {EMAIL_STORY.map((step, i) => (
+ <div key={step.key} className="relative grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+ <div className="hidden lg:flex absolute left-1/2 top-0 -translate-x-1/2 w-9 h-9 rounded-full bg-primary text-primary-foreground items-center justify-center font-black text-sm shadow-lg shadow-primary/25 z-10">
+ {i + 1}
+ </div>
+
+ <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+ <span
+ className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-3 ${
+ step.audience === 'provider' ? 'bg-chart-4/10 text-chart-4' : 'bg-primary/10 text-primary'
+ }`}
+ >
+ {step.audience === 'provider' ? <DashboardIcon className="w-3.5 h-3.5"/> : <Mail className="w-3.5 h-3.5"/>}
+ Sent to the {step.audience === 'provider' ? 'business' : 'customer'}
+ </span>
+ <h3 className="text-xl font-black font-heading text-foreground mb-2">{step.subject}</h3>
+ <p className="text-muted-foreground leading-relaxed">{step.narrative}</p>
+ </div>
+
+ <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
+ <div className="relative max-w-xs mx-auto">
+ <div className="absolute -inset-3 bg-gradient-to-br from-primary/15 via-chart-4/10 to-chart-2/15 rounded-[2rem] blur-2xl" aria-hidden="true"/>
+ <img
+ src={step.image}
+ width={step.width}
+ height={step.height}
+ loading="lazy"
+ decoding="async"
+ alt={`"${step.subject}" email screenshot`}
+ className="relative w-full h-auto rounded-2xl border border-border shadow-xl"
+ />
+ </div>
+ </div>
+ </div>
+ ))}
+ </div>
+ </div>
+ </section>
+ );
+}
+
+const SITE_URL = 'https://letsbook.maakhq.com';
+const PAGE_TITLE = 'LetsBook — Online Booking Software for Home Cleaning Businesses';
+const PAGE_DESCRIPTION =
+ 'Give your home cleaning business a booking page customers love. Automated scheduling, reminders, and one dashboard for every job — $129 one-time, no monthly fees.';
+const OG_IMAGE = `${SITE_URL}/images/og-image.jpg`;
+
+const STRUCTURED_DATA = {
+ '@context': 'https://schema.org',
+ '@type': 'SoftwareApplication',
+ name: 'LetsBook',
+ applicationCategory: 'BusinessApplication',
+ operatingSystem: 'Web',
+ description: PAGE_DESCRIPTION,
+ url: SITE_URL,
+ image: OG_IMAGE,
+ offers: {
+ '@type': 'Offer',
+ price: '129',
+ priceCurrency: 'USD',
+ },
+};
+
 function FeatureCard({ icon: Icon, color, title, description }: { icon: React.ComponentType<{ className?: string }>; color: string; title: string; description: string }) {
  return (
  <div className="group bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
@@ -230,12 +377,33 @@ export default function Welcome() {
 
  return (
  <>
- <Head title="Effortless Online Booking for Home Cleaning Businesses">
+ <Head title={PAGE_TITLE}>
+ <meta name="description" content={PAGE_DESCRIPTION}/>
+ <meta name="robots" content="index, follow"/>
+ <link rel="canonical" href={SITE_URL}/>
+
+ <meta property="og:type" content="website"/>
+ <meta property="og:site_name" content="LetsBook"/>
+ <meta property="og:title" content={PAGE_TITLE}/>
+ <meta property="og:description" content={PAGE_DESCRIPTION}/>
+ <meta property="og:url" content={SITE_URL}/>
+ <meta property="og:image" content={OG_IMAGE}/>
+ <meta property="og:image:width" content="1600"/>
+ <meta property="og:image:height" content="875"/>
+ <meta property="og:image:alt" content="LetsBook booking dashboard"/>
+
+ <meta name="twitter:card" content="summary_large_image"/>
+ <meta name="twitter:title" content={PAGE_TITLE}/>
+ <meta name="twitter:description" content={PAGE_DESCRIPTION}/>
+ <meta name="twitter:image" content={OG_IMAGE}/>
+
+ <script type="application/ld+json">{JSON.stringify(STRUCTURED_DATA)}</script>
+
  <link rel="preconnect"href="https://fonts.bunny.net"/>
  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|lexend:500,600,700,800"rel="stylesheet"/>
- <link rel="preload" as="image" href="/images/dashboard.jpeg" fetchpriority="low"/>
- <link rel="preload" as="image" href="/images/orders.jpeg" fetchpriority="low"/>
- <link rel="preload" as="image" href="/images/availability.jpeg" fetchpriority="low"/>
+ <link rel="preload" as="image" href="/images/dashboard.jpeg" fetchPriority="low"/>
+ <link rel="preload" as="image" href="/images/orders.jpeg" fetchPriority="low"/>
+ <link rel="preload" as="image" href="/images/availability.jpeg" fetchPriority="low"/>
  </Head>
 
  <div className="min-h-dvh bg-background font-sans overflow-x-hidden">
@@ -249,7 +417,7 @@ export default function Welcome() {
  </div>
  <span className="font-black font-heading text-lg text-foreground">LetsBook</span>
  </div>
- <div className="flex items-center gap-2">
+ <nav aria-label="Primary" className="flex items-center gap-2">
  {auth.user ? (
  <Link href={route('dashboard')} className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity">
  Dashboard
@@ -264,7 +432,7 @@ export default function Welcome() {
  </Link>
  </>
  )}
- </div>
+ </nav>
  </div>
  </header>
 
@@ -372,6 +540,8 @@ export default function Welcome() {
  </section>
 
  <ProductTour/>
+
+ <EmailStory/>
 
  {/* How it works */}
  <section id="how-it-works" className="max-w-6xl mx-auto px-5 py-16 lg:py-20">

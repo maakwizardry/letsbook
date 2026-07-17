@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Provider;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Notifications\BookingPaymentConfirmedNotification;
+use App\Notifications\BookingStatusUpdatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 
 class BookingController extends Controller
@@ -24,6 +27,18 @@ class BookingController extends Controller
         }
 
         $booking->update($validated);
+        $booking->load('items.serviceItem', 'customer', 'provider');
+
+        if ($booking->wasChanged('is_paid') && $booking->is_paid && $booking->provider?->email) {
+            $booking->provider->notify(new BookingPaymentConfirmedNotification($booking));
+        }
+
+        if ($booking->wasChanged('status')
+            && in_array($booking->status, [Booking::STATUS_IN_PROGRESS, Booking::STATUS_COMPLETED])
+            && $booking->customer?->email) {
+            Notification::route('mail', $booking->customer->email)
+                ->notify(new BookingStatusUpdatedNotification($booking));
+        }
 
         return back();
     }

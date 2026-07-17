@@ -2,12 +2,12 @@
 
 namespace App\Notifications;
 
-use App\Mail\BookingConfirmedMail;
+use App\Mail\BookingPaymentConfirmedMail;
 use App\Models\Booking;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
-class BookingConfirmationNotification extends Notification
+class BookingPaymentConfirmedNotification extends Notification
 {
     use Queueable;
 
@@ -25,6 +25,6 @@ class BookingConfirmationNotification extends Notification
 
     public function toMail($notifiable)
     {
-        return (new BookingConfirmedMail($this->booking))->to($notifiable->routeNotificationFor('mail', $this));
+        return (new BookingPaymentConfirmedMail($this->booking))->to($notifiable->routeNotificationFor('mail', $this));
     }
 }
