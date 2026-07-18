@@ -3,7 +3,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { ClipboardList, Clock, Users } from 'lucide-react';
+import { ClipboardList, Clock, Tags, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { DashboardIcon } from './icons/dashboard-icon';
 
@@ -17,6 +17,11 @@ const mainNavItems: NavItem[] = [
  title: 'Availability',
  url: '/availability',
  icon: Clock,
+ },
+ {
+ title: 'Services',
+ url: '/services',
+ icon: Tags,
  },
  {
  title: 'Orders',

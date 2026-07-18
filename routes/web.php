@@ -6,6 +6,7 @@ use App\Http\Controllers\Provider\BookingController as ProviderBookingController
 use App\Http\Controllers\Provider\CustomerController;
 use App\Http\Controllers\Provider\DashboardController;
 use App\Http\Controllers\Provider\OrderController;
+use App\Http\Controllers\Provider\ServiceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -21,6 +22,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('bookings/{booking}', [ProviderBookingController::class, 'update'])->name('bookings.update');
     Route::get('availability', [AvailabilityController::class, 'index'])->name('availability');
     Route::put('availability', [AvailabilityController::class, 'update'])->name('availability.update');
+    Route::get('services', [ServiceController::class, 'index'])->name('services');
+    Route::patch('services/{service}', [ServiceController::class, 'update'])->name('services.update');
 });
 
 Route::get('/business/{slug}', [BookingWizardController::class, 'show'])->name('provider.booking');
@@ -30,6 +33,10 @@ Route::permanentRedirect('/provider/{slug}', '/business/{slug}');
 
 Route::get('/create-provider/secret', function () {
     return view('create-provider');
+});
+
+Route::get('/create-provider/onboard', function () {
+    return view('create-provider-onboard');
 });
 
 require __DIR__.'/settings.php';
