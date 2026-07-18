@@ -58,6 +58,21 @@
         .status.error {
             color: #f87171;
         }
+        .variant {
+            margin-bottom: 20px;
+        }
+        .variant-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #7dd3fc;
+            margin-bottom: 6px;
+        }
+        .variant textarea {
+            min-height: 180px;
+        }
+        .variant .actions {
+            margin-top: 8px;
+        }
         textarea {
             width: 100%;
             min-height: 320px;
@@ -99,10 +114,9 @@
     <div class="card">
         <h1>Create Provider</h1>
         <div id="status" class="status">Click "New Provider" and enter a business name.</div>
-        <textarea id="output" readonly placeholder="The outreach message will appear here..."></textarea>
+        <div id="variants"></div>
         <div class="actions">
             <button id="new-btn">New Provider</button>
-            <button id="copy-btn" class="secondary">Copy</button>
         </div>
     </div>
 
@@ -128,13 +142,51 @@
 
     <script>
         const statusEl = document.getElementById('status');
-        const outputEl = document.getElementById('output');
+        const variantsEl = document.getElementById('variants');
         const newBtn = document.getElementById('new-btn');
-        const copyBtn = document.getElementById('copy-btn');
 
         function setStatus(text, isError = false) {
             statusEl.textContent = text;
             statusEl.classList.toggle('error', isError);
+        }
+
+        function renderVariants(variants) {
+            variantsEl.innerHTML = '';
+
+            for (const variant of variants) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'variant';
+
+                const label = document.createElement('div');
+                label.className = 'variant-label';
+                label.textContent = variant.label;
+
+                const textarea = document.createElement('textarea');
+                textarea.readOnly = true;
+                textarea.value = variant.message;
+
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'secondary';
+                copyBtn.textContent = 'Copy';
+                copyBtn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(textarea.value);
+                        setStatus(`Copied "${variant.label}" to clipboard.`);
+                    } catch (err) {
+                        textarea.select();
+                        setStatus('Press Ctrl+C / Cmd+C to copy (clipboard API blocked).');
+                    }
+                });
+
+                actions.appendChild(copyBtn);
+                wrapper.appendChild(label);
+                wrapper.appendChild(textarea);
+                wrapper.appendChild(actions);
+                variantsEl.appendChild(wrapper);
+            }
         }
 
         async function createProvider() {
@@ -150,7 +202,7 @@
             }
 
             setStatus(`Creating "${trimmed}"...`);
-            outputEl.value = '';
+            variantsEl.innerHTML = '';
 
             try {
                 const response = await fetch('/api/providers', {
@@ -165,11 +217,11 @@
                 const data = await response.json();
 
                 if (response.status === 201) {
-                    outputEl.value = data.message;
-                    setStatus(`Created "${data.provider.name}". Copy the message below.`);
+                    renderVariants(data.messages);
+                    setStatus(`Created "${data.provider.name}". Pick the variant that fits this prospect and copy it.`);
                 } else if (response.status === 409) {
-                    outputEl.value = data.outreach_message;
-                    setStatus(`"${data.provider.name}" already exists. Here's their message again.`);
+                    renderVariants(data.outreach_messages);
+                    setStatus(`"${data.provider.name}" already exists. Here are their messages again.`);
                 } else if (response.status === 422 && data.errors) {
                     setStatus(Object.values(data.errors).flat().join('\n'), true);
                 } else {
@@ -181,19 +233,6 @@
         }
 
         newBtn.addEventListener('click', createProvider);
-
-        copyBtn.addEventListener('click', async () => {
-            if (!outputEl.value) {
-                return;
-            }
-            try {
-                await navigator.clipboard.writeText(outputEl.value);
-                setStatus('Copied to clipboard.');
-            } catch (err) {
-                outputEl.select();
-                setStatus('Press Ctrl+C / Cmd+C to copy (clipboard API blocked).');
-            }
-        });
 
         createProvider();
 

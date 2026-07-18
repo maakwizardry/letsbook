@@ -15,10 +15,14 @@ class CreateProviderController extends Controller
         ]);
 
         if ($existing = $onboarding->findByName($validated['name'])) {
+            $variants = $onboarding->messagesFor($existing);
+
             return response()->json([
                 'message' => 'Provider already exists',
                 'provider' => $existing,
-                'outreach_message' => $onboarding->messageFor($existing),
+                'outreach_messages' => $variants,
+                // Back-compat for consumers of the old single-message shape.
+                'outreach_message' => $variants[0]['message'],
             ], 409);
         }
 
@@ -26,7 +30,9 @@ class CreateProviderController extends Controller
 
         return response()->json([
             'provider' => $result['provider'],
-            'message' => $result['message'],
+            'messages' => $result['messages'],
+            // Back-compat for consumers of the old single-message shape.
+            'message' => $result['messages'][0]['message'],
         ], 201);
     }
 

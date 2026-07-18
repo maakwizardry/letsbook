@@ -31,8 +31,12 @@ class CreateProvider extends Command
 
             $this->info("Created provider \"{$name}\" ({$result['provider']->email})");
             $this->newLine();
-            $this->line($result['message']);
-            $this->newLine();
+
+            foreach ($result['messages'] as $variant) {
+                $this->comment($variant['label']);
+                $this->line($variant['message']);
+                $this->newLine();
+            }
         }
     }
 }
