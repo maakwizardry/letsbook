@@ -62,10 +62,26 @@
             margin-bottom: 20px;
         }
         .variant-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 13px;
             font-weight: 600;
             color: #7dd3fc;
             margin-bottom: 6px;
+        }
+        .last-used-tag {
+            display: none;
+            background: #166534;
+            color: #bbf7d0;
+            border-radius: 999px;
+            padding: 2px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .variant.last-used .last-used-tag {
+            display: inline-block;
         }
         .variant textarea {
             min-height: 180px;
@@ -150,16 +166,31 @@
             statusEl.classList.toggle('error', isError);
         }
 
+        const LAST_USED_KEY = 'outreach-last-used-variant';
+
+        function markLastUsed(label) {
+            for (const el of variantsEl.querySelectorAll('.variant')) {
+                el.classList.toggle('last-used', el.dataset.label === label);
+            }
+        }
+
         function renderVariants(variants) {
             variantsEl.innerHTML = '';
+            const lastUsed = localStorage.getItem(LAST_USED_KEY);
 
             for (const variant of variants) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'variant';
+                wrapper.dataset.label = variant.label;
 
                 const label = document.createElement('div');
                 label.className = 'variant-label';
                 label.textContent = variant.label;
+
+                const tag = document.createElement('span');
+                tag.className = 'last-used-tag';
+                tag.textContent = 'Last used';
+                label.appendChild(tag);
 
                 const textarea = document.createElement('textarea');
                 textarea.readOnly = true;
@@ -172,6 +203,8 @@
                 copyBtn.className = 'secondary';
                 copyBtn.textContent = 'Copy';
                 copyBtn.addEventListener('click', async () => {
+                    localStorage.setItem(LAST_USED_KEY, variant.label);
+                    markLastUsed(variant.label);
                     try {
                         await navigator.clipboard.writeText(textarea.value);
                         setStatus(`Copied "${variant.label}" to clipboard.`);
@@ -186,6 +219,10 @@
                 wrapper.appendChild(textarea);
                 wrapper.appendChild(actions);
                 variantsEl.appendChild(wrapper);
+
+                if (variant.label === lastUsed) {
+                    wrapper.classList.add('last-used');
+                }
             }
         }
 
