@@ -49,7 +49,13 @@ function reminderLabel(minutes: number | null | undefined) {
 export default function BookingWizard({ provider, availability = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[] }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
  const [step, setStep] = useState(1);
- 
+ const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+ const goToStep = (next: number) => {
+ setDirection(next > step ? 'forward' : 'back');
+ setStep(next);
+ };
+ const stepEnterClass = direction === 'forward' ? 'slide-in-from-right-4' : 'slide-in-from-left-4';
+
  // Data states
  const [homeTypes, setHomeTypes] = useState<any[]>([]);
  const [serviceItems, setServiceItems] = useState<any[]>([]);
@@ -61,6 +67,16 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  const [selectedDate, setSelectedDate] = useState<string>('');
  const [selectedTime, setSelectedTime] = useState<string>('');
  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', notes: '' });
+ const [fieldErrors, setFieldErrors] = useState<{ phone?: string; email?: string }>({});
+
+ const validatePhone = (value: string) => {
+ if (!value) return undefined;
+ return value.replace(/\D/g, '').length >= 10 ? undefined : 'Enter a valid phone number.';
+ };
+ const validateEmail = (value: string) => {
+ if (!value) return undefined;
+ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? undefined : 'Enter a valid email address.';
+ };
  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'etransfer' | ''>('');
  const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number | null>(null);
 
@@ -236,6 +252,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  const data = await res.json();
  if (res.ok) {
  setBookingResponse(data.booking);
+ setDirection('forward');
  setStep(5);
  } else {
  setError(data.message || 'An error occurred while booking.');
@@ -414,7 +431,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  autoComplete="off"
  value={addressQuery}
  onChange={e => setAddressQuery(e.target.value)}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground"
  placeholder="Start typing your street address..."
  />
  </div>
@@ -425,13 +442,14 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  {addressSuggestions.length > 0 && (
  <div id="address-suggestions" role="listbox" aria-label="Address suggestions" className="bg-card rounded-xl border border-border shadow-sm divide-y divide-border overflow-hidden">
- {addressSuggestions.map((item: any) => (
+ {addressSuggestions.map((item: any, i: number) => (
  <button
  key={item.place_id}
  role="option"
  aria-selected="false"
  onClick={() => handleSelectAddressSuggestion(item)}
- className="w-full flex items-start gap-3 p-4 text-left hover:bg-accent transition-colors cursor-pointer"
+ style={{ animationDelay: `${i * 30}ms` }}
+ className="anim-stagger-item w-full flex items-start gap-3 p-4 text-left hover:bg-accent transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
  >
  <MapPin className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5"/>
  <span className="text-sm text-foreground">{item.display_name}</span>
@@ -459,7 +477,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  setSelectedAddress(null);
  setAddressQuery('');
  }}
- className="text-sm font-semibold text-primary hover:underline cursor-pointer"
+ className="text-sm font-semibold text-primary hover:underline cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  Change address
  </button>
@@ -480,7 +498,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  type="text"
  value={unitNumber}
  onChange={e => setUnitNumber(e.target.value)}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground"
  placeholder="e.g. Unit 4B"
  />
  </div>
@@ -499,7 +517,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  type="text"
  value={buzzCode}
  onChange={e => setBuzzCode(e.target.value)}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground"
  placeholder="e.g. #1234"
  />
  </div>
@@ -517,7 +535,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  id="building-instructions"
  value={buildingInstructions}
  onChange={e => setBuildingInstructions(e.target.value)}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm resize-none h-20 font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm resize-none h-20 font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground"
  placeholder="e.g. Use the side entrance, parking in the back"
  />
  </div>
@@ -535,7 +553,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <button
  disabled={!selectedAddress}
  onClick={() => setAddressConfirmed(true)}
- className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-lg shadow-primary/25 cursor-pointer"
+ className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition-[transform,box-shadow] duration-150 shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  Continue
  </button>
@@ -555,9 +573,9 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <div className="flex items-center gap-3 min-w-0">
  {step > 1 && step < 5 ? (
  <button
- onClick={() => setStep(s => s - 1)}
+ onClick={() => goToStep(step - 1)}
  aria-label="Go back to previous step"
- className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors active:scale-95 cursor-pointer shrink-0"
+ className="p-2 -ml-2 rounded-full hover:bg-accent transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  <ArrowLeft className="w-5 h-5 text-foreground"/>
  </button>
@@ -575,13 +593,20 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </div>
  )}
  </div>
- {/* Progress Bar */}
+ {/* Segmented Progress Bar */}
  {step < 5 && (
- <div className="h-1 w-full bg-muted" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4} aria-label="Booking progress">
+ <div className="flex gap-1 px-4 pb-2.5" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4} aria-label="Booking progress">
+ {[1, 2, 3, 4].map(i => (
+ <div key={i} className="h-1 flex-1 rounded-full bg-muted overflow-hidden">
  <div
- className="h-full bg-primary transition-all duration-300 ease-out"
- style={{ width: `${(step / 4) * 100}%` }}
+ className="h-full bg-primary rounded-full transition-transform duration-300 origin-left"
+ style={{
+ transitionTimingFunction: 'var(--ease-in-out-strong)',
+ transform: `scaleX(${i <= step ? 1 : 0})`,
+ }}
  />
+ </div>
+ ))}
  </div>
  )}
  </header>
@@ -591,7 +616,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  
  {/* STEP 1: HOME TYPE */}
  {step === 1 && (
- <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-300">
+ <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]">
  <div className="mb-6">
  <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Hi, {provider.name}</h2>
  <p className="text-muted-foreground text-sm">What kind of property needs cleaning?</p>
@@ -602,9 +627,9 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  key={type.id}
  onClick={() => {
  setSelectedHomeTypeId(type.id);
- setStep(2);
+ goToStep(2);
  }}
- className="w-full flex items-center p-4 bg-card rounded-2xl border border-border hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98] group cursor-pointer"
+ className="w-full flex items-center p-4 bg-card rounded-2xl border border-border hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 active:scale-[0.97] group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mr-4 group-hover:bg-primary/10 transition-colors shrink-0">
  <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors"/>
@@ -622,7 +647,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  {/* STEP 2: SERVICES (CART STYLE) */}
  {step === 2 && (
- <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-300">
+ <div className={`p-4 animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
  <div className="mb-6">
  <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Add Services</h2>
  <p className="text-muted-foreground text-sm">Customize your cleaning package.</p>
@@ -632,7 +657,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  {serviceItems.map(item => {
  const qty = cart[item.id] || 0;
  return (
- <div key={item.id} className={`flex p-4 bg-card rounded-2xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group ${qty > 0 ? 'border-primary/30' : 'border-border'}`}>
+ <div key={item.id} className={`flex p-4 bg-card rounded-2xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 relative overflow-hidden group ${qty > 0 ? 'border-primary/30' : 'border-border'}`}>
  {qty > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" aria-hidden="true"></div>}
  <div className="flex-1 pr-4 min-w-0">
  <div className="flex items-center gap-2 mb-1">
@@ -648,7 +673,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <button
  onClick={() => handleAddService(item.id)}
  aria-label={`Add ${item.name}`}
- className="px-6 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-full transition-colors text-sm active:scale-95 cursor-pointer"
+ className="px-6 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-full transition-[background-color,transform] duration-150 text-sm active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  Add
  </button>
@@ -657,15 +682,15 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <button
  onClick={() => handleRemoveService(item.id)}
  aria-label={`Remove one ${item.name}`}
- className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors active:scale-90 cursor-pointer"
+ className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-[color,transform] duration-150 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
  >
  <Minus className="w-4 h-4"/>
  </button>
- <span className="w-6 text-center font-semibold text-foreground text-sm" aria-live="polite">{qty}</span>
+ <span key={qty} className="anim-tick inline-block w-6 text-center font-semibold text-foreground text-sm" aria-live="polite">{qty}</span>
  <button
  onClick={() => handleAddService(item.id)}
  aria-label={`Add one more ${item.name}`}
- className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors active:scale-90 cursor-pointer"
+ className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-[color,transform] duration-150 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
  >
  <Plus className="w-4 h-4"/>
  </button>
@@ -681,7 +706,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  {/* STEP 3: SCHEDULE */}
  {step === 3 && (
- <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+ <div className={`animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
  {/* Horizontal Date Picker */}
  <div className="bg-card pt-6 pb-4 border-b border-border sticky top-14 z-40">
  <div className="px-4 mb-4 flex items-center justify-between">
@@ -702,10 +727,11 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  setSelectedTime('');
  }}
  aria-pressed={isSelected}
- className={`flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-all duration-300 ${
+ style={{ animationDelay: `${i * 30}ms` }}
+ className={`anim-stagger-item flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-[transform,box-shadow,border-color,background-color] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
  !isAvailable
  ? 'border-transparent bg-muted text-muted-foreground/50 cursor-not-allowed'
- : `hover:-translate-y-0.5 active:scale-95 cursor-pointer ${
+ : `hover:-translate-y-0.5 active:scale-[0.97] cursor-pointer ${
  isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/30'
  }`
  }`}
@@ -754,7 +780,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  disabled={!slot.available}
  aria-pressed={isSelected}
  onClick={() => setSelectedTime(slot.time)}
- className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-all active:scale-95 flex items-center justify-center ${
+ className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-[transform,box-shadow,border-color,background-color] duration-200 active:scale-[0.97] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
  !slot.available
  ? 'bg-muted border-transparent text-muted-foreground line-through cursor-not-allowed'
  : isSelected
@@ -778,7 +804,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  {/* STEP 4: CHECKOUT DETAILS */}
  {step === 4 && (
- <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+ <div className={`animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
  {/* Receipt Summary */}
  <div className="bg-card p-6 border-b border-border">
  <h2 className="text-xl font-bold font-heading text-foreground mb-4">Summary</h2>
@@ -836,7 +862,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  autoComplete="name"
  value={customer.name}
  onChange={e => setCustomer({...customer, name: e.target.value})}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground"
  placeholder="Jane Doe"
  />
  </div>
@@ -853,12 +879,21 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  type="tel"
  required
  autoComplete="tel"
+ aria-invalid={!!fieldErrors.phone}
+ aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined}
  value={customer.phone}
- onChange={e => setCustomer({...customer, phone: e.target.value})}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ onChange={e => {
+ setCustomer({...customer, phone: e.target.value});
+ if (fieldErrors.phone) setFieldErrors(prev => ({...prev, phone: undefined}));
+ }}
+ onBlur={e => setFieldErrors(prev => ({...prev, phone: validatePhone(e.target.value)}))}
+ className={`w-full pl-11 pr-4 py-4 bg-card border rounded-xl focus:ring-2 focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground ${fieldErrors.phone ? 'border-destructive focus:ring-destructive/40' : 'border-input focus:ring-ring'}`}
  placeholder="(555) 123-4567"
  />
  </div>
+ {fieldErrors.phone && (
+ <p id="customer-phone-error" role="alert" className="text-xs text-destructive font-medium mt-1.5">{fieldErrors.phone}</p>
+ )}
  </div>
 
  <div>
@@ -873,12 +908,21 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  id="customer-email"
  type="email"
  autoComplete="email"
+ aria-invalid={!!fieldErrors.email}
+ aria-describedby={fieldErrors.email ? 'customer-email-error' : undefined}
  value={customer.email}
- onChange={e => setCustomer({...customer, email: e.target.value})}
- className="w-full pl-11 pr-4 py-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm font-medium placeholder:font-normal placeholder:text-muted-foreground text-foreground"
+ onChange={e => {
+ setCustomer({...customer, email: e.target.value});
+ if (fieldErrors.email) setFieldErrors(prev => ({...prev, email: undefined}));
+ }}
+ onBlur={e => setFieldErrors(prev => ({...prev, email: validateEmail(e.target.value)}))}
+ className={`w-full pl-11 pr-4 py-4 bg-card border rounded-xl focus:ring-2 focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm font-medium text-base placeholder:font-normal placeholder:text-muted-foreground text-foreground ${fieldErrors.email ? 'border-destructive focus:ring-destructive/40' : 'border-input focus:ring-ring'}`}
  placeholder="jane@example.com"
  />
  </div>
+ {fieldErrors.email && (
+ <p id="customer-email-error" role="alert" className="text-xs text-destructive font-medium mt-1.5">{fieldErrors.email}</p>
+ )}
  </div>
 
  <div>
@@ -889,7 +933,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  id="customer-notes"
  value={customer.notes}
  onChange={e => setCustomer({...customer, notes: e.target.value})}
- className="w-full p-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-all shadow-sm resize-none h-24 placeholder:text-muted-foreground text-foreground"
+ className="w-full p-4 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-primary outline-none transition-[border-color,box-shadow] duration-150 shadow-sm resize-none h-24 text-base placeholder:text-muted-foreground text-foreground"
  placeholder="Any special instructions for the professional?"
  ></textarea>
  </div>
@@ -902,7 +946,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  role="radio"
  aria-checked={paymentMethod === 'cash'}
  onClick={() => setPaymentMethod('cash')}
- className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 cursor-pointer ${
+ className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-[transform,box-shadow,border-color,background-color] duration-150 active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
  paymentMethod === 'cash'
  ? 'border-primary bg-primary/5 text-primary shadow-sm'
  : 'border-border bg-card text-foreground hover:border-primary/30'
@@ -916,7 +960,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  role="radio"
  aria-checked={paymentMethod === 'etransfer'}
  onClick={() => setPaymentMethod('etransfer')}
- className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-all active:scale-95 cursor-pointer ${
+ className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 font-semibold transition-[transform,box-shadow,border-color,background-color] duration-150 active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
  paymentMethod === 'etransfer'
  ? 'border-primary bg-primary/5 text-primary shadow-sm'
  : 'border-border bg-card text-foreground hover:border-primary/30'
@@ -943,7 +987,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  role="radio"
  aria-checked={reminderMinutesBefore === null}
  onClick={() => setReminderMinutesBefore(null)}
- className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 cursor-pointer ${
+ className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-[transform,box-shadow,border-color,background-color] duration-150 active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
  reminderMinutesBefore === null
  ? 'border-primary bg-primary/5 text-primary'
  : 'border-border bg-card text-foreground hover:border-primary/30'
@@ -958,7 +1002,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  role="radio"
  aria-checked={reminderMinutesBefore === opt.minutes}
  onClick={() => setReminderMinutesBefore(opt.minutes)}
- className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all active:scale-95 cursor-pointer ${
+ className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-[transform,box-shadow,border-color,background-color] duration-150 active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
  reminderMinutesBefore === opt.minutes
  ? 'border-primary bg-primary/5 text-primary'
  : 'border-border bg-card text-foreground hover:border-primary/30'
@@ -987,9 +1031,12 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  {/* STEP 5: SUCCESS */}
  {step === 5 && (
- <div className="flex flex-col items-center px-4 pt-10 pb-16 animate-in fade-in slide-in-from-bottom-2 duration-500">
- <div className="w-14 h-14 bg-success rounded-full flex items-center justify-center shadow-lg shadow-success/25 text-success-foreground mb-5">
+ <div className="flex flex-col items-center px-4 pt-10 pb-16 animate-in fade-in slide-in-from-bottom-2 duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]">
+ <div className="relative mb-5">
+ <div className="anim-ring-pulse absolute inset-0 rounded-full border-2 border-success pointer-events-none" aria-hidden="true"/>
+ <div className="animate-in zoom-in-90 fade-in duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] w-14 h-14 bg-success rounded-full flex items-center justify-center shadow-lg shadow-success/25 text-success-foreground">
  <Check className="w-7 h-7"strokeWidth={3} />
+ </div>
  </div>
  <h2 className="text-2xl font-black font-heading text-foreground mb-1.5 text-center">Booking Confirmed!</h2>
  <p className="text-muted-foreground text-sm text-center mb-8 max-w-sm">
@@ -997,7 +1044,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </p>
 
  {/* Receipt Card */}
- <div className="w-full bg-card rounded-3xl border border-border shadow-sm overflow-hidden mb-6">
+ <div className="anim-stagger-item w-full bg-card rounded-3xl border border-border shadow-sm overflow-hidden mb-6" style={{ animationDelay: '80ms' }}>
  <div className="flex items-center gap-3 p-5 bg-muted/40 border-b border-dashed border-border">
  {provider.logo_url ? (
  <img src={provider.logo_url} alt=""className="w-10 h-10 rounded-xl object-cover border border-border shrink-0"/>
@@ -1017,7 +1064,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </div>
 
  <div className="p-5 space-y-4">
- <div className="space-y-2.5">
+ <div className="anim-stagger-item space-y-2.5" style={{ animationDelay: '140ms' }}>
  {Object.entries(cart).map(([id, qty]) => {
  const item = serviceItems.find(s => s.id === parseInt(id));
  if (!item) return null;
@@ -1030,12 +1077,12 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  })}
  </div>
 
- <div className="pt-4 border-t border-dashed border-border flex justify-between items-center">
+ <div className="anim-stagger-item pt-4 border-t border-dashed border-border flex justify-between items-center" style={{ animationDelay: '180ms' }}>
  <span className="font-bold text-foreground">Total</span>
  <span className="font-black text-xl text-foreground">${bookingResponse?.total_quote}</span>
  </div>
 
- <div className="pt-4 border-t border-border space-y-3">
+ <div className="anim-stagger-item pt-4 border-t border-border space-y-3" style={{ animationDelay: '220ms' }}>
  {scheduleLabel && (
  <div className="flex items-start gap-3">
  <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
@@ -1063,7 +1110,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </div>
 
  {paymentMethod === 'etransfer' && (
- <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 w-full mb-6 flex items-start gap-3">
+ <div className="anim-stagger-item bg-primary/5 border border-primary/20 rounded-2xl p-5 w-full mb-6 flex items-start gap-3" style={{ animationDelay: '260ms' }}>
  <Landmark className="w-5 h-5 text-primary shrink-0 mt-0.5"/>
  <div>
  <p className="font-bold text-foreground text-sm mb-0.5">Send your e-transfer to</p>
@@ -1075,7 +1122,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  )}
 
  {bookingResponse?.reminder_minutes_before && (
- <div className="bg-card border border-border rounded-2xl p-4 w-full mb-6 flex items-center gap-3 shadow-sm">
+ <div className="anim-stagger-item bg-card border border-border rounded-2xl p-4 w-full mb-6 flex items-center gap-3 shadow-sm" style={{ animationDelay: '260ms' }}>
  <BellRing className="w-4 h-4 text-primary shrink-0"/>
  <p className="text-foreground/80 text-sm">
  We'll email you a reminder {reminderLabel(bookingResponse.reminder_minutes_before)} your appointment.
@@ -1088,7 +1135,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  href={googleCalendarUrl}
  target="_blank"
  rel="noopener noreferrer"
- className="w-full mb-3 py-4 bg-card border border-border text-foreground font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+ className="w-full mb-3 py-4 bg-card border border-border text-foreground font-bold rounded-xl active:scale-[0.97] transition-[transform,box-shadow] duration-150 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  <CalendarPlus className="w-4 h-4"/>
  Add to Google Calendar
@@ -1097,7 +1144,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  <button
  onClick={() => window.location.reload()}
- className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-xl active:scale-95 transition-all shadow-xl cursor-pointer"
+ className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-xl active:scale-[0.97] transition-[transform,box-shadow] duration-150 shadow-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  Book Another Service
  </button>
@@ -1114,19 +1161,19 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <div className="flex-shrink-0 w-12 h-12 bg-muted rounded-xl flex items-center justify-center relative">
  <ShoppingCart className="w-5 h-5 text-muted-foreground"/>
  {totalItems > 0 && (
- <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold border-2 border-card animate-in zoom-in spin-in-12 duration-300">
+ <div key={totalItems} className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold border-2 border-card animate-in zoom-in-90 fade-in duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]">
  {totalItems}
  </div>
  )}
  </div>
  <div className="flex-1 min-w-0">
  <div className="text-xs text-muted-foreground font-medium">Total Price</div>
- <div className="text-xl font-black text-foreground">${totalQuote}</div>
+ <div key={totalQuote} className="anim-pop text-xl font-black text-foreground">${totalQuote}</div>
  </div>
  <button
  disabled={totalItems === 0}
- onClick={() => setStep(3)}
- className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-primary/25 cursor-pointer"
+ onClick={() => goToStep(3)}
+ className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-[transform,box-shadow] duration-150 active:scale-[0.97] shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  Continue
  </button>
@@ -1145,8 +1192,8 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </div>
  <button
  disabled={!selectedDate || !selectedTime}
- onClick={() => setStep(4)}
- className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-primary/25 cursor-pointer"
+ onClick={() => goToStep(4)}
+ className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-[transform,box-shadow] duration-150 active:scale-[0.97] shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  Proceed
  </button>
@@ -1160,9 +1207,9 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <div className="text-xl font-black text-foreground">${totalQuote}</div>
  </div>
  <button
- disabled={!customer.name || !customer.phone || !paymentMethod || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
+ disabled={!customer.name || !customer.phone || !paymentMethod || !!fieldErrors.phone || !!fieldErrors.email || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
  onClick={submitBooking}
- className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-primary/25 cursor-pointer"
+ className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-[transform,box-shadow] duration-150 active:scale-[0.97] shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
  {isSubmitting ? (
  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" aria-hidden="true"></div>
