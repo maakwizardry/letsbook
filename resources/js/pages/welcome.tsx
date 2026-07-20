@@ -2,7 +2,6 @@ import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import {
- Sparkles,
  SprayCan,
  Link2,
  CalendarClock,
@@ -20,7 +19,9 @@ import {
  Clock3,
  Mail,
  CalendarPlus,
+ Users,
 } from 'lucide-react';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { DashboardIcon } from '@/components/icons/dashboard-icon';
 
 function Skeleton({ className }: { className: string }) {
@@ -164,6 +165,34 @@ const TOUR_TABS = [
  description: "You set your working hours a single time. From then on, customers only ever see times you're actually free — no double-bookings, ever.",
  points: ['Turn any day on or off', 'Multiple time ranges per day', 'Changes reflect instantly on your booking page'],
  },
+ {
+ key: 'customers',
+ label: 'Customers',
+ icon: Users,
+ color: 'bg-chart-5/10 text-chart-5',
+ eyebrow: 'As you grow',
+ image: '/images/customers.webp',
+ imageWidth: 1400,
+ imageHeight: 860,
+ url: 'letsbook.app/customers',
+ title: 'Know every customer, keep them coming back',
+ description: "No more scrolling WhatsApp threads to find an address or remember who owes what. Every customer's history, spending, and balance lives in one place — with one-tap call or email to follow up on unpaid jobs or win back customers who've gone quiet.",
+ points: ['Total spent & outstanding for every customer', 'One-tap call or email from their profile', 'Spot your regulars — and win back quiet ones'],
+ },
+ {
+ key: 'customer-detail',
+ label: 'Customer Profile',
+ icon: Users,
+ color: 'bg-primary/10 text-primary',
+ eyebrow: 'Before every job',
+ image: '/images/customer-detail.webp',
+ imageWidth: 1400,
+ imageHeight: 860,
+ url: 'letsbook.app/customers/emma-wilson',
+ title: 'Their whole story, on one page',
+ description: "Open a customer's profile and everything's there — lifetime spend, outstanding balance, address with buzz code and entry notes for the crew, and their full booking history. Call or email them without ever hunting for a number again.",
+ points: ['Lifetime spend, balance & average job value', 'Address, buzz code & entry notes for the crew', 'Every past and upcoming booking in one list'],
+ },
 ] as const;
 
 function ProductTour() {
@@ -171,7 +200,7 @@ function ProductTour() {
  <section className="max-w-5xl mx-auto px-5 py-16 lg:py-20">
  <div className="text-center mb-16">
  <h2 className="text-3xl font-black font-heading text-foreground mb-2">See exactly what you'll get</h2>
- <p className="text-muted-foreground max-w-lg mx-auto">A day running your business on LetsBook, from open to close.</p>
+ <p className="text-muted-foreground max-w-lg mx-auto">Running your business on LetsBook — from open to close, and as it grows.</p>
  </div>
 
  <div className="space-y-16 lg:space-y-24">
@@ -409,8 +438,8 @@ export default function Welcome() {
  <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
  <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
  <div className="flex items-center gap-2">
- <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm shadow-primary/30">
- <Sparkles className="w-4.5 h-4.5 text-primary-foreground"/>
+ <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shadow-sm shadow-primary/30">
+ <AppLogoIcon className="w-5 h-5 text-white"/>
  </div>
  <span className="font-black font-heading text-lg text-foreground">LetsBook</span>
  </div>
@@ -494,6 +523,7 @@ export default function Welcome() {
  { icon: PhoneCall, text: 'Customers call just to check if you’re free' },
  { icon: MessageSquareText, text: 'You text back and forth to confirm a time' },
  { icon: ClipboardList, text: 'Jobs scattered across notebooks, texts, and calendars' },
+ { icon: MessageSquareText, text: 'Customer details buried in old WhatsApp threads' },
  ].map((item, i) => (
  <li key={i} className="flex items-start gap-3 text-muted-foreground">
  <item.icon className="w-5 h-5 shrink-0 mt-0.5"/>
@@ -509,6 +539,7 @@ export default function Welcome() {
  { icon: Share2, text: 'Share one booking link, anywhere' },
  { icon: CalendarClock, text: 'Customers pick an open time instantly' },
  { icon: DashboardIcon, text: 'Every booking lands in one dashboard' },
+ { icon: Users, text: 'Every customer’s history and contact, one tap away' },
  ].map((item, i) => (
  <li key={i} className="flex items-start gap-3 text-foreground font-medium">
  <item.icon className="w-5 h-5 shrink-0 mt-0.5 text-primary"/>
@@ -534,6 +565,7 @@ export default function Welcome() {
  <FeatureCard icon={BellRing} color="bg-chart-5/10 text-chart-5" title="Automatic Reminders" description="Customers get reminded automatically, so you get fewer no-shows."/>
  <FeatureCard icon={Wallet} color="bg-success/10 text-success" title="Cash & E-transfer" description="Built-in support for how home cleaning businesses actually get paid."/>
  <FeatureCard icon={CalendarPlus} color="bg-chart-2/10 text-chart-2" title="Add to Calendar" description="Every booking includes a one-tap link to add it to Google Calendar — for reminders and easier day-to-day scheduling."/>
+ <FeatureCard icon={Users} color="bg-chart-4/10 text-chart-4" title="Customer Profiles" description="See every customer's history, spending, and balance — and call or email them in one tap to keep them coming back."/>
  </div>
  </section>
 
@@ -605,7 +637,7 @@ export default function Welcome() {
  <ArrowRight className="w-4 h-4"/>
  </Link>
  <p className="text-xs text-muted-foreground mt-4">
- Questions first? Email <a href="mailto:workwithmaak@gmail.com" className="font-semibold text-primary hover:underline">workwithmaak@gmail.com</a>
+ Questions first? Email <a href="mailto:rehan@maakhq.com" className="font-semibold text-primary hover:underline">rehan@maakhq.com</a>
  </p>
  </div>
  </div>
@@ -617,7 +649,7 @@ export default function Welcome() {
  <div className="max-w-6xl mx-auto px-5 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
  <div className="flex items-center gap-2">
  <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
- <Sparkles className="w-3.5 h-3.5 text-primary-foreground"/>
+ <AppLogoIcon className="w-4 h-4 text-white"/>
  </div>
  <span className="font-bold font-heading text-sm text-foreground">LetsBook</span>
  </div>
