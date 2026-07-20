@@ -19,12 +19,14 @@ import {
  Landmark,
  Search,
  Building2,
- Pencil,
  BellRing,
  Star,
  Hash,
  StickyNote,
- CalendarPlus
+ CalendarPlus,
+ ShieldCheck,
+ BadgeCheck,
+ ThumbsUp
 } from 'lucide-react';
 import { buildGoogleCalendarUrl } from '@/lib/google-calendar';
 
@@ -80,8 +82,10 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'etransfer' | ''>('');
  const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number | null>(null);
 
+ // Wizard intro state
+ const [wizardStarted, setWizardStarted] = useState(false);
+
  // Address states
- const [addressConfirmed, setAddressConfirmed] = useState(false);
  const [addressQuery, setAddressQuery] = useState('');
  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
@@ -184,6 +188,20 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  const totalItems = useMemo(() => {
  return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
  }, [cart]);
+
+ const groupedServiceItems = useMemo(() => {
+ const groups: { category: string; items: typeof serviceItems }[] = [];
+ serviceItems.forEach(item => {
+ const category = item.category || 'Other';
+ let group = groups.find(g => g.category === category);
+ if (!group) {
+ group = { category, items: [] };
+ groups.push(group);
+ }
+ group.items.push(item);
+ });
+ return groups;
+ }, [serviceItems]);
 
  const scheduleLabel = useMemo(() => {
  if (!selectedDate || !selectedTime) return '';
@@ -344,26 +362,31 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  }
  };
 
- // GATE: Require a confirmed, map-picked address before the booking wizard is shown
- if (!addressConfirmed) {
+ // INTRO: Branded hero shown before the numbered wizard steps begin
+ if (!wizardStarted) {
  const brandStyle = provider.brand_color ? ({ '--primary': provider.brand_color } as React.CSSProperties) : undefined;
  const hasStats = provider.rating || provider.completed_cleanings_count || provider.years_in_business;
+ const trustBadges = [
+ provider.is_insured && { icon: ShieldCheck, label: 'Insured' },
+ provider.is_background_checked && { icon: BadgeCheck, label: 'Background-Checked' },
+ provider.has_satisfaction_guarantee && { icon: ThumbsUp, label: 'Satisfaction Guaranteed' },
+ ].filter(Boolean) as { icon: typeof ShieldCheck; label: string }[];
 
  return (
- <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20" style={brandStyle}>
+ <div className="h-dvh overflow-hidden bg-background flex flex-col font-sans selection:bg-primary/20" style={brandStyle}>
  <Head title={`Book ${provider.name}`} />
 
- <main className="flex-1 max-w-2xl mx-auto w-full pb-36">
- {/* Hero: provider image with business branding on top */}
- <div className="relative h-[38vh] min-h-[280px] max-h-[400px] w-full overflow-hidden">
+ <main className="flex-1 min-h-0 max-w-2xl mx-auto w-full overflow-hidden">
+ {/* Hero: full-screen provider image with all branding overlaid, fixed to the viewport */}
+ <div className="relative h-full w-full overflow-hidden flex flex-col justify-end">
  {provider.cover_image_url ? (
  <img src={provider.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover"/>
  ) : (
  <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/70"/>
  )}
- <div className="absolute inset-0 bg-black/60"/>
+ <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/10"/>
 
- <div className="absolute inset-x-0 bottom-0 px-5 pb-10">
+ <div className="relative px-5 pb-[calc(7rem+env(safe-area-inset-bottom))]">
  {provider.logo_url && (
  <img
  src={provider.logo_url}
@@ -371,12 +394,12 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  className="w-14 h-14 rounded-2xl object-cover mb-4 border-2 border-white/70 shadow-lg"
  />
  )}
- <h1 className="text-2xl font-black font-heading text-white mb-1.5">{provider.name}</h1>
+ <h1 className="text-3xl font-black font-heading text-white mb-1.5">{provider.name}</h1>
  {provider.tagline && (
  <p className="text-white/85 font-medium mb-2.5">{provider.tagline}</p>
  )}
  {hasStats && (
- <div className="flex items-center gap-x-2 gap-y-1.5 flex-wrap text-sm text-white/90">
+ <div className="flex items-center gap-x-2 gap-y-1.5 flex-wrap text-sm text-white/90 mb-5">
  {provider.rating && (
  <span className="flex items-center gap-1 font-semibold text-white">
  <Star className="w-4 h-4 fill-amber-400 text-amber-400"/>
@@ -391,28 +414,336 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  )}
  </div>
  )}
- </div>
- </div>
-
- {/* Bottom sheet: welcome, address */}
- <div className="relative -mt-5 rounded-t-[28px] bg-background z-10 pt-6">
 
  {/* Welcome Message */}
- <div className="px-5 pb-1">
- <p className="text-foreground/80 text-sm leading-relaxed">
- Thanks for choosing us! Let's start by knowing where you'd like our team to come.
+ <p className="text-white/85 text-sm leading-relaxed mb-4 max-w-sm">
+ Pick your home type, choose your services, and grab a time that works — takes about 2 minutes.
  </p>
+
+ {/* Trust Badges */}
+ {trustBadges.length > 0 && (
+ <div className="flex flex-wrap gap-2">
+ {trustBadges.map(({ icon: Icon, label }) => (
+ <span key={label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 text-white border border-white/25 backdrop-blur-sm text-xs font-semibold">
+ <Icon className="w-3.5 h-3.5"/>
+ {label}
+ </span>
+ ))}
+ </div>
+ )}
+ </div>
+ </div>
+ </main>
+
+ {/* Primary CTA */}
+ <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border z-50 animate-in slide-in-from-bottom-full duration-300">
+ <div className="max-w-2xl mx-auto">
+ <button
+ onClick={() => setWizardStarted(true)}
+ className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold active:scale-[0.97] transition-[transform,box-shadow] duration-150 shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+ >
+ See Services & Pricing
+ </button>
+ </div>
+ </div>
+ </div>
+ );
+ }
+
+ return (
+ <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20">
+ <Head title={`${getStepTitle()} | ${provider.name}`} />
+
+ {/* Top App Bar - Fixed */}
+ <header className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
+ <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+ <div className="flex items-center gap-3 min-w-0">
+ {step > 1 && step < 5 ? (
+ <button
+ onClick={() => goToStep(step - 1)}
+ aria-label="Go back to previous step"
+ className="p-2 -ml-2 rounded-full hover:bg-accent transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+ >
+ <ArrowLeft className="w-5 h-5 text-foreground"/>
+ </button>
+ ) : (
+ <div className="w-9 shrink-0" aria-hidden="true"></div>
+ )}
+ <h1 className="text-lg font-semibold font-heading text-foreground truncate">
+ {getStepTitle()}
+ </h1>
+ </div>
+ {/* Step Count */}
+ {step < 5 && (
+ <div className="text-xs font-semibold text-primary bg-accent px-2.5 py-1 rounded-full shrink-0">
+ Step {step} of 4
+ </div>
+ )}
+ </div>
+ {/* Segmented Progress Bar */}
+ {step < 5 && (
+ <div className="flex gap-1 px-4 pb-2.5" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4} aria-label="Booking progress">
+ {[1, 2, 3, 4].map(i => (
+ <div key={i} className="h-1 flex-1 rounded-full bg-muted overflow-hidden">
+ <div
+ className="h-full bg-primary rounded-full transition-transform duration-300 origin-left"
+ style={{
+ transitionTimingFunction: 'var(--ease-in-out-strong)',
+ transform: `scaleX(${i <= step ? 1 : 0})`,
+ }}
+ />
+ </div>
+ ))}
+ </div>
+ )}
+ </header>
+
+ {/* Main Content Area */}
+ <main className="flex-1 max-w-2xl mx-auto w-full pb-28">
+ 
+ {/* STEP 1: HOME TYPE */}
+ {step === 1 && (
+ <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]">
+ <div className="mb-6">
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Select your home type</h2>
+ <p className="text-muted-foreground text-sm">Pricing and services are tailored to your property size.</p>
+ </div>
+ <div className="space-y-4">
+ {homeTypes.map(type => (
+ <button
+ key={type.id}
+ onClick={() => {
+ setSelectedHomeTypeId(type.id);
+ goToStep(2);
+ }}
+ className="w-full flex items-center p-4 bg-card rounded-2xl border border-border hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 active:scale-[0.97] group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+ >
+ <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mr-4 group-hover:bg-primary/10 transition-colors shrink-0">
+ <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors"/>
+ </div>
+ <div className="flex-1 text-left min-w-0">
+ <h3 className="text-lg font-semibold text-foreground">{type.label}</h3>
+ <p className="text-sm text-muted-foreground line-clamp-1">{type.description || 'Standard cleaning for this property size.'}</p>
+ </div>
+ <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0"/>
+ </button>
+ ))}
+ </div>
+ </div>
+ )}
+
+ {/* STEP 2: SERVICES (CART STYLE) */}
+ {step === 2 && (
+ <div className={`p-4 animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
+ <div className="mb-6">
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Add Services</h2>
+ <p className="text-muted-foreground text-sm">Customize your cleaning package.</p>
  </div>
 
- {/* Main Question */}
- <div className="px-5 pt-4 pb-4">
- <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Where should we come?</h2>
+ <div className="space-y-6">
+ {groupedServiceItems.map(group => (
+ <div key={group.category}>
+ <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider">{group.category}</h3>
+ <div className="space-y-4">
+ {group.items.map(item => {
+ const qty = cart[item.id] || 0;
+ return (
+ <div key={item.id} className={`flex p-4 bg-card rounded-2xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 relative overflow-hidden group ${qty > 0 ? 'border-primary/30' : 'border-border'}`}>
+ {qty > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" aria-hidden="true"></div>}
+ <div className="flex-1 pr-4 min-w-0">
+ <div className="flex items-center gap-2 mb-1">
+ {qty > 0 && <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10 shrink-0"/>}
+ <h3 className="font-bold text-foreground text-base">{item.name}</h3>
+ </div>
+ <div className="font-semibold text-foreground">${item.price}</div>
+ </div>
+
+ <div className="flex flex-col items-end justify-center shrink-0">
+ {qty === 0 ? (
+ <button
+ onClick={() => handleAddService(item.id)}
+ aria-label={`Add ${item.name}`}
+ className="px-6 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-full transition-[background-color,transform] duration-150 text-sm active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+ >
+ Add
+ </button>
+ ) : (
+ <div className="flex items-center bg-muted rounded-full border border-border">
+ <button
+ onClick={() => handleRemoveService(item.id)}
+ aria-label={`Remove one ${item.name}`}
+ className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-[color,transform] duration-150 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
+ >
+ <Minus className="w-4 h-4"/>
+ </button>
+ <span key={qty} className="anim-tick inline-block w-6 text-center font-semibold text-foreground text-sm" aria-live="polite">{qty}</span>
+ <button
+ onClick={() => handleAddService(item.id)}
+ aria-label={`Add one more ${item.name}`}
+ className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-[color,transform] duration-150 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
+ >
+ <Plus className="w-4 h-4"/>
+ </button>
+ </div>
+ )}
+ </div>
+ </div>
+ );
+ })}
+ </div>
+ </div>
+ ))}
+ </div>
+ </div>
+ )}
+
+ {/* STEP 3: SCHEDULE */}
+ {step === 3 && (
+ <div className={`animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
+ {/* Order Summary Recap */}
+ <div className="px-4 pt-4 flex items-center justify-between gap-3 text-sm">
+ <span className="text-muted-foreground">
+ <span className="font-semibold text-foreground">{totalItems}</span> service{totalItems === 1 ? '' : 's'} selected · <span className="font-semibold text-foreground">${totalQuote}</span>
+ </span>
+ <button
+ onClick={() => goToStep(2)}
+ className="font-semibold text-primary hover:underline cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shrink-0"
+ >
+ Edit
+ </button>
+ </div>
+
+ {/* Horizontal Date Picker */}
+ <div className="bg-card pt-6 pb-4 border-b border-border sticky top-14 z-40">
+ <div className="px-4 mb-4 flex items-center justify-between">
+ <h2 className="text-xl font-bold font-heading text-foreground">When do you need us?</h2>
+ <CalendarDays className="w-5 h-5 text-muted-foreground"/>
+ </div>
+
+ <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2 gap-3 snap-x">
+ {dates.map((d, i) => {
+ const isSelected = selectedDate === d.value;
+ const isAvailable = availability.some((a: any) => a.day_of_week === d.dayOfWeek);
+ return (
+ <button
+ key={d.value}
+ disabled={!isAvailable}
+ onClick={() => {
+ setSelectedDate(d.value);
+ setSelectedTime('');
+ }}
+ aria-pressed={isSelected}
+ style={{ animationDelay: `${i * 30}ms` }}
+ className={`anim-stagger-item flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-[transform,box-shadow,border-color,background-color] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+ !isAvailable
+ ? 'border-transparent bg-muted text-muted-foreground/50 cursor-not-allowed'
+ : `hover:-translate-y-0.5 active:scale-[0.97] cursor-pointer ${
+ isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/30'
+ }`
+ }`}
+ >
+ <span className={`text-xs uppercase font-semibold mb-1 ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
+ {d.isToday ? 'Today' : d.dayLabel}
+ </span>
+ <span className={`text-xl font-bold ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-foreground'}`}>
+ {d.dayNumber}
+ </span>
+ </button>
+ )
+ })}
+ </div>
+ </div>
+
+ {/* Time Slots */}
+ <div className="p-4 pt-6">
+ {!selectedDate ? (
+ <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
+ <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
+ <p>Please select a date to view available times.</p>
+ </div>
+ ) : timeSlots.length === 0 ? (
+ <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
+ <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
+ <p>This provider isn't available on this day.</p>
+ </div>
+ ) : (
+ <div className="space-y-8 animate-in fade-in duration-300">
+ {periods.map(period => {
+ const periodSlots = timeSlots.filter(s => s.period === period);
+ if (periodSlots.length === 0) return null;
+
+ return (
+ <div key={period}>
+ <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2">
+ {period}
+ </h3>
+ <div className="grid grid-cols-3 gap-3">
+ {periodSlots.map(slot => {
+ const isSelected = selectedTime === slot.time;
+ return (
+ <button
+ key={slot.time}
+ disabled={!slot.available}
+ aria-pressed={isSelected}
+ onClick={() => setSelectedTime(slot.time)}
+ className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-[transform,box-shadow,border-color,background-color] duration-200 active:scale-[0.97] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+ !slot.available
+ ? 'bg-muted border-transparent text-muted-foreground line-through cursor-not-allowed'
+ : isSelected
+ ? 'bg-primary border-primary text-primary-foreground shadow-md shadow-primary/20 cursor-pointer'
+ : 'bg-card border-border text-foreground hover:border-success/50 hover:bg-success/5 cursor-pointer'
+ }`}
+ >
+ {slot.label}
+ </button>
+ )
+ })}
+ </div>
+ </div>
+ )
+ })}
+ </div>
+ )}
+ </div>
+ </div>
+ )}
+
+ {/* STEP 4: CHECKOUT DETAILS */}
+ {step === 4 && (
+ <div className={`animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
+ {/* Receipt Summary */}
+ <div className="bg-card p-6 border-b border-border">
+ <h2 className="text-xl font-bold font-heading text-foreground mb-4">Summary</h2>
+
+ <div className="space-y-3 mb-6">
+ {Object.entries(cart).map(([id, qty]) => {
+ const item = serviceItems.find(s => s.id === parseInt(id));
+ if(!item) return null;
+ return (
+ <div key={id} className="flex justify-between items-start text-sm">
+ <div className="flex-1">
+ <span className="font-semibold text-foreground">{qty}x {item.name}</span>
+ </div>
+ <div className="font-medium text-foreground">${item.price * qty}</div>
+ </div>
+ )
+ })}
+ </div>
+
+ <div className="pt-4 border-t border-dashed border-border flex justify-between items-center">
+ <span className="font-bold text-foreground text-lg">Total to pay</span>
+ <span className="font-black text-2xl text-foreground">${totalQuote}</span>
+ </div>
+ </div>
+
+ {/* User Details Form */}
+ <div className="p-4 pt-6 space-y-5">
+ <div>
+ <h2 className="text-xl font-bold font-heading text-foreground mb-1">Where should we come?</h2>
  <p className="text-muted-foreground text-sm">Enter the address where you'd like the cleaning service.</p>
  </div>
 
- {/* Address Entry Card */}
- <div className="px-5">
- <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+ <div className="bg-card rounded-xl border border-border shadow-sm p-4">
  {!selectedAddress ? (
  <>
  <label htmlFor="address-search" className="block text-sm font-semibold text-foreground mb-1.5">
@@ -543,311 +874,10 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </div>
  )}
  </div>
- </div>
- </div>
- </main>
 
- {/* Primary CTA */}
- <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/80 backdrop-blur-md border-t border-border z-50 animate-in slide-in-from-bottom-full duration-300">
- <div className="max-w-2xl mx-auto">
- <button
- disabled={!selectedAddress}
- onClick={() => setAddressConfirmed(true)}
- className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition-[transform,box-shadow] duration-150 shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
- >
- Continue
- </button>
- </div>
- </div>
- </div>
- );
- }
+ <div className="pt-2 border-t border-dashed border-border"/>
 
- return (
- <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20">
- <Head title={`${getStepTitle()} | ${provider.name}`} />
-
- {/* Top App Bar - Fixed */}
- <header className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
- <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
- <div className="flex items-center gap-3 min-w-0">
- {step > 1 && step < 5 ? (
- <button
- onClick={() => goToStep(step - 1)}
- aria-label="Go back to previous step"
- className="p-2 -ml-2 rounded-full hover:bg-accent transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
- >
- <ArrowLeft className="w-5 h-5 text-foreground"/>
- </button>
- ) : (
- <div className="w-9 shrink-0" aria-hidden="true"></div>
- )}
- <h1 className="text-lg font-semibold font-heading text-foreground truncate">
- {getStepTitle()}
- </h1>
- </div>
- {/* Step Count */}
- {step < 5 && (
- <div className="text-xs font-semibold text-primary bg-accent px-2.5 py-1 rounded-full shrink-0">
- Step {step} of 4
- </div>
- )}
- </div>
- {/* Segmented Progress Bar */}
- {step < 5 && (
- <div className="flex gap-1 px-4 pb-2.5" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4} aria-label="Booking progress">
- {[1, 2, 3, 4].map(i => (
- <div key={i} className="h-1 flex-1 rounded-full bg-muted overflow-hidden">
- <div
- className="h-full bg-primary rounded-full transition-transform duration-300 origin-left"
- style={{
- transitionTimingFunction: 'var(--ease-in-out-strong)',
- transform: `scaleX(${i <= step ? 1 : 0})`,
- }}
- />
- </div>
- ))}
- </div>
- )}
- </header>
-
- {/* Main Content Area */}
- <main className="flex-1 max-w-2xl mx-auto w-full pb-28">
- 
- {/* STEP 1: HOME TYPE */}
- {step === 1 && (
- <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]">
- <div className="mb-6">
- <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Hi, {provider.name}</h2>
- <p className="text-muted-foreground text-sm">What kind of property needs cleaning?</p>
- </div>
- <div className="space-y-4">
- {homeTypes.map(type => (
- <button
- key={type.id}
- onClick={() => {
- setSelectedHomeTypeId(type.id);
- goToStep(2);
- }}
- className="w-full flex items-center p-4 bg-card rounded-2xl border border-border hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 active:scale-[0.97] group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
- >
- <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mr-4 group-hover:bg-primary/10 transition-colors shrink-0">
- <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors"/>
- </div>
- <div className="flex-1 text-left min-w-0">
- <h3 className="text-lg font-semibold text-foreground">{type.label}</h3>
- <p className="text-sm text-muted-foreground line-clamp-1">{type.description || 'Standard cleaning for this property size.'}</p>
- </div>
- <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0"/>
- </button>
- ))}
- </div>
- </div>
- )}
-
- {/* STEP 2: SERVICES (CART STYLE) */}
- {step === 2 && (
- <div className={`p-4 animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
- <div className="mb-6">
- <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Add Services</h2>
- <p className="text-muted-foreground text-sm">Customize your cleaning package.</p>
- </div>
-
- <div className="space-y-4">
- {serviceItems.map(item => {
- const qty = cart[item.id] || 0;
- return (
- <div key={item.id} className={`flex p-4 bg-card rounded-2xl border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 relative overflow-hidden group ${qty > 0 ? 'border-primary/30' : 'border-border'}`}>
- {qty > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" aria-hidden="true"></div>}
- <div className="flex-1 pr-4 min-w-0">
- <div className="flex items-center gap-2 mb-1">
- {qty > 0 && <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10 shrink-0"/>}
- <h3 className="font-bold text-foreground text-base">{item.name}</h3>
- </div>
- <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide font-medium">{item.category}</div>
- <div className="font-semibold text-foreground">${item.price}</div>
- </div>
-
- <div className="flex flex-col items-end justify-center shrink-0">
- {qty === 0 ? (
- <button
- onClick={() => handleAddService(item.id)}
- aria-label={`Add ${item.name}`}
- className="px-6 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-full transition-[background-color,transform] duration-150 text-sm active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
- >
- Add
- </button>
- ) : (
- <div className="flex items-center bg-muted rounded-full border border-border">
- <button
- onClick={() => handleRemoveService(item.id)}
- aria-label={`Remove one ${item.name}`}
- className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-[color,transform] duration-150 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
- >
- <Minus className="w-4 h-4"/>
- </button>
- <span key={qty} className="anim-tick inline-block w-6 text-center font-semibold text-foreground text-sm" aria-live="polite">{qty}</span>
- <button
- onClick={() => handleAddService(item.id)}
- aria-label={`Add one more ${item.name}`}
- className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-primary transition-[color,transform] duration-150 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
- >
- <Plus className="w-4 h-4"/>
- </button>
- </div>
- )}
- </div>
- </div>
- );
- })}
- </div>
- </div>
- )}
-
- {/* STEP 3: SCHEDULE */}
- {step === 3 && (
- <div className={`animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
- {/* Horizontal Date Picker */}
- <div className="bg-card pt-6 pb-4 border-b border-border sticky top-14 z-40">
- <div className="px-4 mb-4 flex items-center justify-between">
- <h2 className="text-xl font-bold font-heading text-foreground">When do you need us?</h2>
- <CalendarDays className="w-5 h-5 text-muted-foreground"/>
- </div>
-
- <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2 gap-3 snap-x">
- {dates.map((d, i) => {
- const isSelected = selectedDate === d.value;
- const isAvailable = availability.some((a: any) => a.day_of_week === d.dayOfWeek);
- return (
- <button
- key={d.value}
- disabled={!isAvailable}
- onClick={() => {
- setSelectedDate(d.value);
- setSelectedTime('');
- }}
- aria-pressed={isSelected}
- style={{ animationDelay: `${i * 30}ms` }}
- className={`anim-stagger-item flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-[transform,box-shadow,border-color,background-color] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
- !isAvailable
- ? 'border-transparent bg-muted text-muted-foreground/50 cursor-not-allowed'
- : `hover:-translate-y-0.5 active:scale-[0.97] cursor-pointer ${
- isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/30'
- }`
- }`}
- >
- <span className={`text-xs uppercase font-semibold mb-1 ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
- {d.isToday ? 'Today' : d.dayLabel}
- </span>
- <span className={`text-xl font-bold ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-foreground'}`}>
- {d.dayNumber}
- </span>
- </button>
- )
- })}
- </div>
- </div>
-
- {/* Time Slots */}
- <div className="p-4 pt-6">
- {!selectedDate ? (
- <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
- <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
- <p>Please select a date to view available times.</p>
- </div>
- ) : timeSlots.length === 0 ? (
- <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
- <Clock className="w-12 h-12 text-muted-foreground/40 mb-3"/>
- <p>This provider isn't available on this day.</p>
- </div>
- ) : (
- <div className="space-y-8 animate-in fade-in duration-300">
- {periods.map(period => {
- const periodSlots = timeSlots.filter(s => s.period === period);
- if (periodSlots.length === 0) return null;
-
- return (
- <div key={period}>
- <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2">
- {period}
- </h3>
- <div className="grid grid-cols-3 gap-3">
- {periodSlots.map(slot => {
- const isSelected = selectedTime === slot.time;
- return (
- <button
- key={slot.time}
- disabled={!slot.available}
- aria-pressed={isSelected}
- onClick={() => setSelectedTime(slot.time)}
- className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-[transform,box-shadow,border-color,background-color] duration-200 active:scale-[0.97] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
- !slot.available
- ? 'bg-muted border-transparent text-muted-foreground line-through cursor-not-allowed'
- : isSelected
- ? 'bg-primary border-primary text-primary-foreground shadow-md shadow-primary/20 cursor-pointer'
- : 'bg-card border-border text-foreground hover:border-success/50 hover:bg-success/5 cursor-pointer'
- }`}
- >
- {slot.label}
- </button>
- )
- })}
- </div>
- </div>
- )
- })}
- </div>
- )}
- </div>
- </div>
- )}
-
- {/* STEP 4: CHECKOUT DETAILS */}
- {step === 4 && (
- <div className={`animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
- {/* Receipt Summary */}
- <div className="bg-card p-6 border-b border-border">
- <h2 className="text-xl font-bold font-heading text-foreground mb-4">Summary</h2>
-
- <div className="space-y-3 mb-6">
- {Object.entries(cart).map(([id, qty]) => {
- const item = serviceItems.find(s => s.id === parseInt(id));
- if(!item) return null;
- return (
- <div key={id} className="flex justify-between items-start text-sm">
- <div className="flex-1">
- <span className="font-semibold text-foreground">{qty}x {item.name}</span>
- </div>
- <div className="font-medium text-foreground">${item.price * qty}</div>
- </div>
- )
- })}
- </div>
-
- <div className="pt-4 border-t border-dashed border-border flex justify-between items-center">
- <span className="font-bold text-foreground text-lg">Total to pay</span>
- <span className="font-black text-2xl text-foreground">${totalQuote}</span>
- </div>
- </div>
-
- {/* User Details Form */}
- <div className="p-4 pt-6 space-y-5">
  <h2 className="text-xl font-bold font-heading text-foreground">Your Details</h2>
-
- <div className="flex items-start gap-3 p-4 bg-card rounded-xl border border-border shadow-sm">
- <MapPin className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5"/>
- <div className="flex-1 text-sm text-foreground min-w-0">
- {selectedAddress?.displayName}
- {unitNumber && <span className="block text-muted-foreground mt-0.5">Unit {unitNumber}</span>}
- </div>
- <button
- onClick={() => setAddressConfirmed(false)}
- className="text-muted-foreground hover:text-primary transition-colors shrink-0 cursor-pointer"
- aria-label="Change address"
- >
- <Pencil className="w-4 h-4"/>
- </button>
- </div>
 
  <div>
  <label htmlFor="customer-name" className="block text-sm font-semibold text-foreground mb-1.5">Full Name</label>
@@ -1207,7 +1237,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  <div className="text-xl font-black text-foreground">${totalQuote}</div>
  </div>
  <button
- disabled={!customer.name || !customer.phone || !paymentMethod || !!fieldErrors.phone || !!fieldErrors.email || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
+ disabled={!selectedAddress || !customer.name || !customer.phone || !paymentMethod || !!fieldErrors.phone || !!fieldErrors.email || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
  onClick={submitBooking}
  className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-[transform,box-shadow] duration-150 active:scale-[0.97] shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
