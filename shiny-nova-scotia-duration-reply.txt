@@ -1,0 +1,9 @@
+Hey Viktoria! Good news on both of these too.
+
+You can now set how long a booking actually takes when you add it — right on the "New booking" screen there's a Duration field (1 hour, 2 hours, 3 hours, etc.). Whatever you pick blocks that whole stretch of time on your public page, so if you're with a client for 4 hours, all 4 hours show as unavailable to other customers, not just the first one.
+
+And the syncing issue is fixed — bookings you add manually now correctly block your public availability. Turned out to be a couple of bugs on our end, nothing you were doing wrong.
+
+One thing to flag: your recurring booking for Brenda Borman was set up right before this duration feature went in, so right now it's only blocking a single hour (10-11am) even though I'm guessing that appointment runs longer. There's no way for you to edit that from your end yet, so if you're comfortable with it, I can just delete that booking completely and re-add it with the correct duration so it blocks the right amount of time going forward — just let me know it's okay and how long that appointment actually runs, and I'll take care of it.
+
+Let me know either way!

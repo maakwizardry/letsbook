@@ -60,6 +60,11 @@ class Provider extends Authenticatable
         return $this->hasMany(Booking::class);
     }
 
+    public function bookingSeries()
+    {
+        return $this->hasMany(BookingSeries::class);
+    }
+
     public function availabilities()
     {
         return $this->hasMany(Availability::class);

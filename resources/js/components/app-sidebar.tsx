@@ -3,7 +3,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { ClipboardList, Clock, Tags, Users } from 'lucide-react';
+import { CircleHelp, ClipboardList, Clock, Tags, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { DashboardIcon } from './icons/dashboard-icon';
 
@@ -32,6 +32,11 @@ const mainNavItems: NavItem[] = [
  title: 'Customers',
  url: '/customers',
  icon: Users,
+ },
+ {
+ title: 'Help',
+ url: '/help',
+ icon: CircleHelp,
  },
 ];
 

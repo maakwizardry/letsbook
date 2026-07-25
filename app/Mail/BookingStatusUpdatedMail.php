@@ -14,9 +14,11 @@ class BookingStatusUpdatedMail extends Mailable
 
     public function build()
     {
-        $subject = $this->booking->status === Booking::STATUS_COMPLETED
-            ? 'Your cleaning is complete — thank you!'
-            : 'Your cleaning has started';
+        $subject = match ($this->booking->status) {
+            Booking::STATUS_COMPLETED => 'Your cleaning is complete — thank you!',
+            Booking::STATUS_CANCELLED => 'Your booking has been cancelled',
+            default => 'Your cleaning has started',
+        };
 
         $address = trim($this->booking->customer->address
             .($this->booking->customer->unit_number ? ', Unit '.$this->booking->customer->unit_number : ''));

@@ -1,8 +1,11 @@
 @extends('emails.layout')
 
-@php $isCompleted = $booking->status === \App\Models\Booking::STATUS_COMPLETED; @endphp
+@php
+$isCompleted = $booking->status === \App\Models\Booking::STATUS_COMPLETED;
+$isCancelled = $booking->status === \App\Models\Booking::STATUS_CANCELLED;
+@endphp
 
-@section('subject', $isCompleted ? 'Your cleaning is complete — thank you!' : 'Your cleaning has started')
+@section('subject', $isCompleted ? 'Your cleaning is complete — thank you!' : ($isCancelled ? 'Your booking has been cancelled' : 'Your cleaning has started'))
 
 @section('content')
 @if ($isCompleted)
@@ -19,6 +22,18 @@
 @include('emails.partials.booking-items', ['items' => $booking->items, 'total' => $booking->total_quote, 'paid' => $booking->is_paid])
 
 <p style="margin:24px 0 0 0;">Thank you for choosing {{ $booking->provider->name }} — we hope to see you again soon!</p>
+@elseif ($isCancelled)
+<p style="margin:0 0 20px 0;font-size:18px;font-weight:800;color:#0f172a;">Your booking has been cancelled</p>
+<p style="margin:0 0 16px 0;">Hi {{ $booking->customer->name }},</p>
+<p style="margin:0 0 8px 0;">Your appointment with <strong>{{ $booking->provider->name }}</strong> has been cancelled.</p>
+
+@include('emails.partials.details-table', ['rows' => [
+    'Reference ID' => $booking->reference_id,
+    'Was scheduled for' => $booking->scheduled_at->format('l, F j, Y \a\t g:i A'),
+    'Address' => $address,
+]])
+
+<p style="margin:24px 0 0 0;">If this was a mistake or you'd like to rebook, just reply to this email and {{ $booking->provider->name }} will help sort it out.</p>
 @else
 <p style="margin:0 0 20px 0;font-size:18px;font-weight:800;color:#0f172a;">Your cleaning has started</p>
 <p style="margin:0 0 16px 0;">Hi {{ $booking->customer->name }},</p>

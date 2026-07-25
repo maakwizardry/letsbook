@@ -26,6 +26,7 @@ class Booking extends Model
 
     protected $fillable = [
         'provider_id',
+        'booking_series_id',
         'customer_id',
         'home_type_id',
         'reference_id',
@@ -36,6 +37,7 @@ class Booking extends Model
         'paid_at',
         'notes',
         'scheduled_at',
+        'duration_hours',
         'reminder_minutes_before',
         'remind_at',
         'reminder_sent_at',
@@ -43,6 +45,7 @@ class Booking extends Model
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'duration_hours' => 'integer',
         'remind_at' => 'datetime',
         'reminder_sent_at' => 'datetime',
         'paid_at' => 'datetime',
@@ -62,6 +65,11 @@ class Booking extends Model
     public function homeType()
     {
         return $this->belongsTo(HomeType::class);
+    }
+
+    public function bookingSeries()
+    {
+        return $this->belongsTo(BookingSeries::class);
     }
 
     public function items()

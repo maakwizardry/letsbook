@@ -109,11 +109,11 @@
 </head>
 <body>
     <div class="card">
-        <h1>Create Provider</h1>
+        <h1>Create Provider <span id="session-counter" style="font-size:12px; font-weight:400; color:#7dd3fc; margin-left:8px;">0 created this session</span></h1>
         <div id="status" class="status">Click "New Provider" and enter a business name.</div>
         <div id="variants"></div>
         <div class="actions">
-            <button id="new-btn">New Provider</button>
+            <button id="new-btn">New Provider <span style="opacity:0.7; font-weight:400;">(N)</span></button>
         </div>
     </div>
 
@@ -121,6 +121,14 @@
         const statusEl = document.getElementById('status');
         const variantsEl = document.getElementById('variants');
         const newBtn = document.getElementById('new-btn');
+        const sessionCounterEl = document.getElementById('session-counter');
+
+        let sessionCreatedCount = 0;
+
+        function incrementSessionCounter() {
+            sessionCreatedCount += 1;
+            sessionCounterEl.textContent = `${sessionCreatedCount} created this session`;
+        }
 
         function setStatus(text, isError = false) {
             statusEl.textContent = text;
@@ -187,6 +195,25 @@
             }
         }
 
+        async function copyRandomVariant(variants, providerName) {
+            if (!variants || variants.length === 0) {
+                setStatus(`Created "${providerName}". No outreach variants to copy.`);
+                return;
+            }
+
+            const variant = variants[Math.floor(Math.random() * variants.length)];
+
+            localStorage.setItem(LAST_USED_KEY, variant.label);
+            markLastUsed(variant.label);
+
+            try {
+                await navigator.clipboard.writeText(variant.message);
+                setStatus(`Created "${providerName}". Copied "${variant.label}" to your clipboard — just paste it.`);
+            } catch (err) {
+                setStatus(`Created "${providerName}". Couldn't auto-copy (clipboard blocked) — use the Copy button on "${variant.label}".`, true);
+            }
+        }
+
         async function createProvider() {
             const name = window.prompt('Provider name:');
             if (name === null) {
@@ -216,7 +243,8 @@
 
                 if (response.status === 201) {
                     renderVariants(data.messages);
-                    setStatus(`Created "${data.provider.name}". Pick the variant that fits this prospect and copy it.`);
+                    incrementSessionCounter();
+                    await copyRandomVariant(data.messages, data.provider.name);
                 } else if (response.status === 409) {
                     renderVariants(data.outreach_messages);
                     setStatus(`"${data.provider.name}" already exists. Here are their messages again.`);
@@ -231,6 +259,18 @@
         }
 
         newBtn.addEventListener('click', createProvider);
+
+        document.addEventListener('keydown', (e) => {
+            const target = e.target;
+            const isTyping = target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+            if (isTyping || e.metaKey || e.ctrlKey || e.altKey) {
+                return;
+            }
+            if (e.key.toLowerCase() === 'n') {
+                e.preventDefault();
+                createProvider();
+            }
+        });
 
         createProvider();
     </script>

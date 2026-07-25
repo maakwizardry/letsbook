@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Provider;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\ServiceItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,7 +22,7 @@ class OrderController extends Controller
             'date_to' => ['nullable', 'date'],
         ]);
 
-        $query = Booking::with(['customer', 'homeType'])
+        $query = Booking::with(['customer', 'homeType', 'bookingSeries:id,frequency'])
             ->withCount('items')
             ->where('provider_id', $request->user()->id);
 
@@ -42,6 +44,26 @@ class OrderController extends Controller
 
         $bookings = $query->orderByDesc('scheduled_at')->get();
 
+        $homeTypes = $request->user()->homeTypes()->get(['id', 'label']);
+
+        $serviceItems = $request->user()->serviceItems()
+            ->get()
+            ->sortBy([
+                fn (ServiceItem $item) => $item->home_type_id === null ? 1 : 0,
+                fn (ServiceItem $item) => $item->id,
+            ])
+            ->groupBy(fn (ServiceItem $item) => $item->category ?: 'Other')
+            ->map(fn (Collection $group, string $category) => [
+                'category' => $category,
+                'items' => $group->map(fn (ServiceItem $item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'price' => (float) $item->price,
+                    'home_type_id' => $item->home_type_id,
+                ])->values(),
+            ])
+            ->values();
+
         return Inertia::render('orders', [
             'bookings' => $bookings,
             'statuses' => Booking::STATUSES,
@@ -51,6 +73,8 @@ class OrderController extends Controller
                 'date_from' => $validated['date_from'] ?? null,
                 'date_to' => $validated['date_to'] ?? null,
             ],
+            'homeTypes' => $homeTypes,
+            'serviceItemCategories' => $serviceItems,
         ]);
     }
 }

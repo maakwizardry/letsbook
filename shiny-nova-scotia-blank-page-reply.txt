@@ -1,0 +1,9 @@
+Hey Viktoria! Thanks for flagging this — I dug in and found what happened.
+
+Good news first: your booking for Brenda Borman actually did go through. It's saved as a repeating booking (every 2 weeks), with 7 visits already scheduled out through mid-October. You don't need to re-enter it.
+
+What happened with the blank page: I was still actively polishing this "add booking" feature yesterday, and an update rolled out right while you were using it. That's what caused the page to flash blank and reset your form — it wasn't losing your info, it just needed to catch up to the newest version of the page. That round of changes is done now, so it shouldn't happen again.
+
+If you ever see it again: before re-entering anything, do a full refresh of the page (or close and reopen the tab) and check Orders to see if it actually saved — the system won't let a duplicate be created for the same client at the same time, so it's safe to check first rather than redo it from scratch.
+
+Sorry for the scare, and really appreciate you testing this early — it's exactly the kind of thing that's helpful to catch. Let me know if anything else looks off!

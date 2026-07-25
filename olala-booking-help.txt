@@ -1,0 +1,9 @@
+Hey Olala! Great question — and yes, you can absolutely add your regular clients yourself, right from your dashboard.
+
+Go to Orders and click "+ New booking." Fill in their name, phone or email, and address (there's an address search built in, just like the booking page your customers use), then pick the service and home type.
+
+For a recurring client — say someone who comes every Wednesday at 8am — just set the date to that Wednesday and the time to 8:00 AM, then check "Repeat this booking." Choose Weekly and it'll select Wednesday for you automatically. You can have it repeat forever, stop after a certain number of visits, or end on a specific date — whatever fits that client.
+
+Once it's set up, it'll keep adding that booking to your schedule on its own, so you won't need to re-enter it every week. If a client's schedule ever changes, there's a "Stop repeating" option right on that booking.
+
+We don't have a training video just yet, but I'm happy to hop on and walk you through it, or put one together if that'd help — just let me know!

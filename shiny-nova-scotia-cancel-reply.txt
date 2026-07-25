@@ -1,0 +1,9 @@
+Hey Viktoria! Good news — cancelling is live now.
+
+Head to Orders, find the booking, and click the small X button next to the calendar icon on that row. It'll ask you to confirm, and once you do, the booking is marked cancelled and the customer gets an email letting them know — so you don't have to message them yourself.
+
+For your friend's test booking, you can go ahead and cancel it that way whenever you'd like.
+
+One thing worth knowing: if a booking is part of a repeating series, cancelling it only removes that one occurrence — the rest of the series keeps going as scheduled. If you ever want to stop the whole series, that's the separate "Stop repeating" option on the same booking.
+
+Let me know how it feels once you've tried it!

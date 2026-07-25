@@ -30,8 +30,11 @@ class AvailabilityController extends Controller
             $query->where('scheduled_at', '<=', Carbon::parse($request->end_date)->endOfDay());
         }
 
-        $bookedSlots = $query->pluck('scheduled_at')->map(function ($date) {
-            return $date->toIso8601String();
+        $bookedSlots = $query->get(['scheduled_at', 'duration_hours'])->map(function (Booking $booking) {
+            return [
+                'start' => $booking->scheduled_at->toIso8601String(),
+                'duration_hours' => $booking->duration_hours,
+            ];
         });
 
         return response()->json([

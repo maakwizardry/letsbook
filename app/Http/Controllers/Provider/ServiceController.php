@@ -12,14 +12,21 @@ use Inertia\Response;
 
 class ServiceController extends Controller
 {
+    private const CATEGORY_ORDER = [
+        'Standard Cleaning',
+        'Deep Cleaning',
+        'Move-In / Move-Out Cleaning',
+    ];
+
     public function index(Request $request): Response
     {
         $items = $request->user()->serviceItems()
             ->with('homeType')
             ->get()
-            ->sortBy([
-                fn (ServiceItem $item) => $item->home_type_id === null ? 1 : 0,
-                fn (ServiceItem $item) => $item->id,
+            ->sortBy(fn (ServiceItem $item) => [
+                self::categoryRank($item->category),
+                $item->home_type_id ?? PHP_INT_MAX,
+                $item->id,
             ]);
 
         $categories = $items

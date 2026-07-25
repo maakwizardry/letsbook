@@ -48,6 +48,15 @@ function reminderLabel(minutes: number | null | undefined) {
  return REMINDER_OPTIONS.find(o => o.minutes === minutes)?.label || null;
 }
 
+const CATEGORY_ORDER = ['Standard Cleaning', 'Deep Cleaning', 'Move-In / Move-Out Cleaning'];
+
+function categoryRank(category: string) {
+ const index = CATEGORY_ORDER.indexOf(category);
+ if (index !== -1) return index;
+ if (category === 'Add-ons') return CATEGORY_ORDER.length + 1;
+ return CATEGORY_ORDER.length;
+}
+
 export default function BookingWizard({ provider, availability = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[] }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
  const [step, setStep] = useState(1);
@@ -61,7 +70,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  // Data states
  const [homeTypes, setHomeTypes] = useState<any[]>([]);
  const [serviceItems, setServiceItems] = useState<any[]>([]);
- const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+ const [bookedSlots, setBookedSlots] = useState<{ start: string; duration_hours: number }[]>([]);
  
  // Selection states
  const [selectedHomeTypeId, setSelectedHomeTypeId] = useState<number | null>(null);
@@ -200,7 +209,7 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  }
  group.items.push(item);
  });
- return groups;
+ return groups.sort((a, b) => categoryRank(a.category) - categoryRank(b.category));
  }, [serviceItems]);
 
  const scheduleLabel = useMemo(() => {
@@ -293,7 +302,13 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
  dayNumber: d.getDate(),
  dayOfWeek: d.getDay(),
- value: d.toISOString().split('T')[0],
+ // Build the value from local date parts, not toISOString() — that
+ // converts to UTC first, which silently rolls "today" over to
+ // tomorrow's date for any viewer west of UTC once it's past 8pm-ish
+ // local time, even though dayNumber/dayOfWeek above (correctly local)
+ // still show today. That mismatch meant the booked-slots lookup and
+ // the final scheduled_at could both target the wrong calendar day.
+ value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
  isToday: i === 0
  });
  }
@@ -323,9 +338,16 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  const slots = Array.from(hours).sort((a, b) => a - b).map(i => {
  const hourStr = i.toString().padStart(2, '0');
  const timeString = `${hourStr}:00`;
- const isBooked = bookedSlots.some(isoStr => {
- const bookedDate = new Date(isoStr);
- return bookedDate.getUTCHours() === i;
+ const isBooked = bookedSlots.some(slot => {
+ // Parse the local hour directly out of the ISO string instead of going
+ // through Date/getUTCHours() — the API already encodes the provider's
+ // local wall-clock hour before the UTC offset suffix, and converting to
+ // UTC here would shift it by the provider's offset (e.g. 10am Toronto
+ // becoming hour 14), permanently breaking this comparison against `i`.
+ const hourStr = slot.start.split('T')[1]?.split(':')[0];
+ if (hourStr === undefined) return false;
+ const startHour = parseInt(hourStr, 10);
+ return i >= startHour && i < startHour + slot.duration_hours;
  });
  const period = i < 12 ? 'Morning' : (i < 16 ? 'Afternoon' : 'Evening');
  const formatted = i > 12 ? `${i-12}:00 PM` : (i === 12 ? '12:00 PM' : `${i}:00 AM`);
@@ -374,11 +396,24 @@ export default function BookingWizard({ provider, availability = [] }: { provide
 
  return (
  <div className="h-dvh overflow-hidden bg-background flex flex-col font-sans selection:bg-primary/20" style={brandStyle}>
- <Head title={`Book ${provider.name}`} />
+ <Head title={`Book ${provider.name}`}>
+ <meta name="description" content={provider.tagline || `Book ${provider.name} online — pick your services and a time that works.`}/>
+ <meta property="og:type" content="website"/>
+ <meta property="og:site_name" content="LetsBook"/>
+ <meta property="og:title" content={`Book ${provider.name}`}/>
+ <meta property="og:description" content={provider.tagline || `Book ${provider.name} online — pick your services and a time that works.`}/>
+ <meta property="og:url" content={`https://letsbook.maakhq.com/business/${provider.slug}`}/>
+ <meta property="og:image" content={provider.cover_image_url}/>
+ <meta property="og:image:alt" content={`${provider.name} — ${provider.tagline || 'Book online'}`}/>
+ <meta name="twitter:card" content="summary_large_image"/>
+ <meta name="twitter:title" content={`Book ${provider.name}`}/>
+ <meta name="twitter:description" content={provider.tagline || `Book ${provider.name} online — pick your services and a time that works.`}/>
+ <meta name="twitter:image" content={provider.cover_image_url}/>
+ </Head>
 
- <main className="flex-1 min-h-0 max-w-2xl mx-auto w-full overflow-hidden">
- {/* Hero: full-screen provider image with all branding overlaid, fixed to the viewport */}
- <div className="relative h-full w-full overflow-hidden flex flex-col justify-end">
+ <main className="flex-1 min-h-0 max-w-2xl mx-auto w-full overflow-hidden bg-neutral-950 flex items-center justify-center">
+ {/* Hero: cover image capped to a 9:16 aspect ratio so it never over-crops on unusually tall phones */}
+ <div className="relative w-full aspect-[9/16] max-h-full overflow-hidden flex flex-col justify-end">
  {provider.cover_image_url ? (
  <img src={provider.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover"/>
  ) : (

@@ -1,0 +1,9 @@
+Hey Viktoria! Good news on both questions.
+
+You can now add your existing clients yourself, right from your dashboard — go to Orders and click "+ New booking." Fill in their name, phone or email, and address (there's an address search built in, just like the booking page customers use), pick the service, and set the date/time.
+
+And yes, recurring bookings are in too. When you're adding a client, just check "Repeat this booking" and you can set it to weekly, bi-weekly, or monthly. If it's a client you clean for on more than one day a week (say every Monday and Thursday), you can pick both days in that same booking — it'll keep both on your schedule automatically. You can also choose whether it repeats forever, stops after a certain number of visits, or ends on a specific date.
+
+Once it's set up, it'll keep your schedule filled in automatically about 3 months out, so you won't need to re-enter it every week. If a client's schedule ever changes, there's a "Stop repeating" option right on that booking.
+
+Give it a try and let me know how it feels — happy to adjust anything that's not quite right for how you work.
