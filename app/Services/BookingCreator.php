@@ -70,6 +70,52 @@ class BookingCreator
     }
 
     /**
+     * Apply an edit to an existing Booking — updates the schedule/details
+     * and replaces its BookingItems wholesale (simpler and safer than
+     * diffing old vs new items, and matches how infrequently bookings are
+     * edited). remind_at is recomputed the same way create() computes it,
+     * since a reschedule can move the reminder from past to future or vice
+     * versa.
+     *
+     * @param  array{home_type_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
+     */
+    public function update(Booking $booking, array $attributes, Collection $serviceItems): Booking
+    {
+        $scheduledAt = $attributes['scheduled_at'];
+
+        $remindAt = null;
+        if (! empty($attributes['reminder_minutes_before']) && ! empty($attributes['customer_email'])) {
+            $candidate = $scheduledAt->copy()->subMinutes($attributes['reminder_minutes_before']);
+            if ($candidate->isFuture()) {
+                $remindAt = $candidate;
+            }
+        }
+
+        $booking->update([
+            'home_type_id' => $attributes['home_type_id'],
+            'total_quote' => $serviceItems->sum('price'),
+            'payment_method' => $attributes['payment_method'],
+            'notes' => $attributes['notes'] ?? null,
+            'scheduled_at' => $scheduledAt,
+            'duration_hours' => $attributes['duration_hours'],
+            'reminder_minutes_before' => $remindAt ? $attributes['reminder_minutes_before'] : null,
+            'remind_at' => $remindAt,
+        ]);
+
+        $booking->items()->delete();
+
+        foreach ($serviceItems as $item) {
+            BookingItem::create([
+                'booking_id' => $booking->id,
+                'service_item_id' => $item->id,
+                'price_at_booking' => $item->price,
+            ]);
+        }
+
+        return $booking;
+    }
+
+    /**
      * Whether a booking of the given duration starting at $start would
      * overlap any existing active booking for this provider. Replaces three
      * previously-duplicated, disagreeing hardcoded ±1-hour checks with real
@@ -77,13 +123,16 @@ class BookingCreator
      * The query's lower-bound prefilter uses MAX_DURATION_HOURS rather than
      * an arbitrary window, since that's the only guarantee we have on how
      * far back an existing booking's own end time could still reach.
+     * $excludeBookingId lets an edit check for overlaps against every other
+     * booking without perpetually colliding with itself.
      */
-    public function hasOverlap(int $providerId, Carbon $start, int $durationHours): bool
+    public function hasOverlap(int $providerId, Carbon $start, int $durationHours, ?int $excludeBookingId = null): bool
     {
         $end = $start->copy()->addHours($durationHours);
 
         return Booking::where('provider_id', $providerId)
             ->where('status', '!=', Booking::STATUS_CANCELLED)
+            ->when($excludeBookingId, fn ($query) => $query->where('id', '!=', $excludeBookingId))
             ->where('scheduled_at', '>', $start->copy()->subHours(self::MAX_DURATION_HOURS))
             ->where('scheduled_at', '<', $end)
             ->get(['scheduled_at', 'duration_hours'])

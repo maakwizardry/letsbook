@@ -37,6 +37,8 @@ class RecurringBookingGenerator
         $lastScanned = null;
         $stillActive = true;
 
+        $blockedDates = $series->provider->blockedDates()->pluck('date')->map->toDateString()->flip();
+
         while ($cursor->lte($horizon)) {
             if ($series->max_occurrences && $occurrencesCreated >= $series->max_occurrences) {
                 $stillActive = false;
@@ -55,9 +57,15 @@ class RecurringBookingGenerator
                     $series->starts_at->second,
                 );
 
-                $overlap = $this->bookingCreator->hasOverlap($series->provider_id, $scheduledAt, $series->duration_hours);
+                $isBlocked = $blockedDates->has($cursor->toDateString());
+                $overlap = ! $isBlocked && $this->bookingCreator->hasOverlap($series->provider_id, $scheduledAt, $series->duration_hours);
 
-                if ($overlap) {
+                if ($isBlocked) {
+                    Log::warning('Skipped recurring booking occurrence — date is blocked', [
+                        'booking_series_id' => $series->id,
+                        'scheduled_at' => $scheduledAt->toDateTimeString(),
+                    ]);
+                } elseif ($overlap) {
                     Log::warning('Skipped recurring booking occurrence due to a scheduling conflict', [
                         'booking_series_id' => $series->id,
                         'scheduled_at' => $scheduledAt->toDateTimeString(),

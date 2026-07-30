@@ -22,7 +22,7 @@ class OrderController extends Controller
             'date_to' => ['nullable', 'date'],
         ]);
 
-        $query = Booking::with(['customer', 'homeType', 'bookingSeries:id,frequency'])
+        $query = Booking::with(['customer', 'homeType', 'bookingSeries:id,frequency', 'items.serviceItem'])
             ->withCount('items')
             ->where('provider_id', $request->user()->id);
 

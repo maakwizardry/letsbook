@@ -10,7 +10,7 @@ import InputError from '@/components/input-error';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Banknote, CalendarPlus, CalendarRange, Check, ChevronDown, LoaderCircle, Landmark, PackageCheck, Plus, Repeat, X } from 'lucide-react';
+import { Banknote, CalendarPlus, CalendarRange, Check, ChevronDown, LoaderCircle, Landmark, PackageCheck, Pencil, Plus, Repeat, X } from 'lucide-react';
 import { buildGoogleCalendarUrl, parseFloatingIsoDateTime } from '@/lib/google-calendar';
 import { AddressAutocomplete, type SelectedAddress } from '@/components/address-autocomplete';
 
@@ -25,6 +25,11 @@ interface Customer {
  email: string | null;
  address: string | null;
  unit_number: string | null;
+ buzz_code: string | null;
+ building_instructions: string | null;
+ postal_code: string | null;
+ latitude: number | null;
+ longitude: number | null;
 }
 
 interface HomeType {
@@ -47,6 +52,9 @@ interface Booking {
  status: string;
  is_paid: boolean;
  items_count: number;
+ items: { service_item_id: number }[];
+ notes: string | null;
+ reminder_minutes_before: number | null;
  customer: Customer | null;
  home_type: HomeType | null;
  booking_series: BookingSeriesSummary | null;
@@ -250,7 +258,10 @@ function DateRangeFilter({ from, to, onApply }: { from: string; to: string; onAp
  );
 }
 
-interface NewBookingForm {
+// Shared by the New booking and Edit booking dialogs — everything about a
+// booking except New-only recurrence settings, so both forms stay visually
+// and behaviorally identical without duplicating the field markup.
+interface BookingFormFieldsData {
  home_type_id: string;
  service_item_ids: number[];
  customer_name: string;
@@ -269,6 +280,9 @@ interface NewBookingForm {
  payment_method: 'cash' | 'etransfer' | '';
  reminder_minutes_before: string;
  notes: string;
+}
+
+interface NewBookingForm extends BookingFormFieldsData {
  is_recurring: boolean;
  frequency: 'weekly' | 'biweekly' | 'monthly' | '';
  days_of_week: number[];
@@ -276,6 +290,8 @@ interface NewBookingForm {
  ends_count: string;
  ends_on: string;
 }
+
+type EditBookingFormData = BookingFormFieldsData;
 
 const emptyNewBookingForm: NewBookingForm = {
  home_type_id: '',
@@ -304,54 +320,37 @@ const emptyNewBookingForm: NewBookingForm = {
  ends_on: '',
 };
 
-function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: HomeType[]; serviceItemCategories: ServiceItemCategory[] }) {
- const [open, setOpen] = useState(false);
+/**
+ * The full set of booking fields (client, address, home type/services,
+ * schedule, payment, reminder, notes) shared by New booking and Edit
+ * booking. `setData`/`data` are typed loosely against `any` because
+ * Inertia's generic `useForm<T>()` setter doesn't collapse cleanly into a
+ * single non-generic function type — callers pass their own `useForm`
+ * instance's `data`/`setData` straight through, so real key/value pairing
+ * is still enforced at each call site.
+ */
+function BookingFormFields({
+ data,
+ setData,
+ errors,
+ homeTypes,
+ serviceItemCategories,
+ selectedAddress,
+ onAddressChange,
+ afterDuration,
+}: {
+ data: BookingFormFieldsData;
+ setData: (key: any, value?: any) => void;
+ errors: Partial<Record<string, string>>;
+ homeTypes: HomeType[];
+ serviceItemCategories: ServiceItemCategory[];
+ selectedAddress: SelectedAddress | null;
+ onAddressChange: (address: SelectedAddress | null) => void;
+ afterDuration?: React.ReactNode;
+}) {
  const [addressOpen, setAddressOpen] = useState(false);
- const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
- const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm<NewBookingForm>(emptyNewBookingForm);
- const scheduledAtError = (errors as Partial<Record<string, string>>).scheduled_at;
 
- const onAddressChange = (address: SelectedAddress | null) => {
- setSelectedAddress(address);
- setData((prev) => ({
- ...prev,
- customer_address: address?.displayName ?? '',
- latitude: address?.lat ?? null,
- longitude: address?.lon ?? null,
- postal_code: address?.postcode || prev.postal_code,
- }));
- };
-
- const scheduledDateWeekday = (): number | null => {
- if (!data.scheduled_date) return null;
- return new Date(`${data.scheduled_date}T00:00:00`).getDay();
- };
-
- const onIsRecurringChange = (checked: boolean) => {
- setData((prev) => {
- const defaultDay = scheduledDateWeekday();
- return {
- ...prev,
- is_recurring: checked,
- days_of_week: checked && prev.days_of_week.length === 0 && defaultDay !== null ? [defaultDay] : prev.days_of_week,
- };
- });
- };
-
- const onFrequencyChange = (value: 'weekly' | 'biweekly' | 'monthly') => {
- setData((prev) => {
- const defaultDay = scheduledDateWeekday();
- return {
- ...prev,
- frequency: value,
- days_of_week: (value === 'weekly' || value === 'biweekly') && prev.days_of_week.length === 0 && defaultDay !== null ? [defaultDay] : prev.days_of_week,
- };
- });
- };
-
- const toggleDay = (day: number) => {
- setData('days_of_week', data.days_of_week.includes(day) ? data.days_of_week.filter((d) => d !== day) : [...data.days_of_week, day].sort());
- };
+ const allItems = useMemo(() => serviceItemCategories.flatMap((c) => c.items), [serviceItemCategories]);
 
  const availableItems = useMemo(() => {
  const homeTypeId = data.home_type_id ? Number(data.home_type_id) : null;
@@ -362,8 +361,6 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
  }))
  .filter((category) => category.items.length > 0);
  }, [serviceItemCategories, data.home_type_id]);
-
- const allItems = useMemo(() => serviceItemCategories.flatMap((c) => c.items), [serviceItemCategories]);
 
  const total = useMemo(
  () => data.service_item_ids.reduce((sum, id) => sum + (allItems.find((item) => item.id === id)?.price ?? 0), 0),
@@ -376,7 +373,7 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
 
  const onHomeTypeChange = (value: string) => {
  const homeTypeId = Number(value);
- setData((prev) => ({
+ setData((prev: BookingFormFieldsData) => ({
  ...prev,
  home_type_id: value,
  service_item_ids: prev.service_item_ids.filter((id) => {
@@ -386,55 +383,8 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
  }));
  };
 
- const close = () => {
- setOpen(false);
- reset();
- clearErrors();
- setAddressOpen(false);
- setSelectedAddress(null);
- };
-
- const submit = (e: FormEvent) => {
- e.preventDefault();
- transform((formData) => {
- const { scheduled_date, scheduled_time, duration_hours, is_recurring, frequency, days_of_week, ends_type, ends_count, ends_on, ...rest } = formData;
- const scheduled_at = `${scheduled_date} ${scheduled_time || '00:00'}:00`;
-
- if (!is_recurring) {
- return { ...rest, scheduled_at, duration_hours: Number(duration_hours), is_recurring: false };
- }
-
- return {
- ...rest,
- scheduled_at,
- duration_hours: Number(duration_hours),
- is_recurring: true,
- frequency,
- days_of_week: frequency === 'monthly' ? null : days_of_week,
- ends_type,
- ends_count: ends_type === 'count' ? Number(ends_count) : null,
- ends_on: ends_type === 'date' ? ends_on : null,
- };
- });
- post('/bookings', {
- preserveScroll: true,
- onSuccess: () => close(),
- });
- };
-
  return (
- <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
- <Button type="button" onClick={() => setOpen(true)} className="gap-1.5">
- <Plus className="h-4 w-4"/>
- New booking
- </Button>
- <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
- <DialogHeader>
- <DialogTitle>New booking</DialogTitle>
- <DialogDescription>Add a booking for a client you already had, or one who booked by phone or text.</DialogDescription>
- </DialogHeader>
-
- <form onSubmit={submit} className="grid gap-5">
+ <>
  <div className="grid gap-3">
  <div className="grid gap-1.5">
  <Label htmlFor="customer_name">Client name</Label>
@@ -541,7 +491,7 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
  <div className="grid gap-1.5">
  <Label htmlFor="scheduled_date">Date</Label>
  <Input id="scheduled_date" type="date" value={data.scheduled_date} onChange={(e) => setData('scheduled_date', e.target.value)} required/>
- <InputError message={scheduledAtError}/>
+ <InputError message={errors.scheduled_at}/>
  </div>
  <div className="grid gap-1.5">
  <Label htmlFor="scheduled_time">Time</Label>
@@ -564,6 +514,160 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
  <InputError message={errors.duration_hours}/>
  </div>
 
+ {afterDuration}
+
+ <div className="grid gap-1.5">
+ <Label htmlFor="payment_method">Payment method</Label>
+ <Select value={data.payment_method} onValueChange={(v) => setData('payment_method', v as 'cash' | 'etransfer')}>
+ <SelectTrigger id="payment_method" className="w-full">
+ <SelectValue placeholder="Select payment method"/>
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="cash">Cash</SelectItem>
+ <SelectItem value="etransfer">E-transfer</SelectItem>
+ </SelectContent>
+ </Select>
+ <InputError message={errors.payment_method}/>
+ </div>
+
+ <div className="grid gap-1.5">
+ <Label htmlFor="reminder_minutes_before">Reminder email</Label>
+ <Select
+ value={data.reminder_minutes_before || 'none'}
+ onValueChange={(v) => setData('reminder_minutes_before', v === 'none' ? '' : v)}
+ disabled={!data.customer_email}
+ >
+ <SelectTrigger id="reminder_minutes_before" className="w-full">
+ <SelectValue placeholder="No reminder"/>
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="none">No reminder</SelectItem>
+ {REMINDER_OPTIONS.map((opt) => (
+ <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ {!data.customer_email && <p className="text-xs text-muted-foreground">Add an email to send a reminder.</p>}
+ </div>
+
+ <div className="grid gap-1.5">
+ <Label htmlFor="notes">Notes</Label>
+ <textarea
+ id="notes"
+ value={data.notes}
+ onChange={(e) => setData('notes', e.target.value)}
+ rows={2}
+ className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+ />
+ </div>
+ </>
+ );
+}
+
+function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: HomeType[]; serviceItemCategories: ServiceItemCategory[] }) {
+ const [open, setOpen] = useState(false);
+ const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
+ const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm<NewBookingForm>(emptyNewBookingForm);
+
+ const onAddressChange = (address: SelectedAddress | null) => {
+ setSelectedAddress(address);
+ setData((prev) => ({
+ ...prev,
+ customer_address: address?.displayName ?? '',
+ latitude: address?.lat ?? null,
+ longitude: address?.lon ?? null,
+ postal_code: address?.postcode || prev.postal_code,
+ }));
+ };
+
+ const scheduledDateWeekday = (): number | null => {
+ if (!data.scheduled_date) return null;
+ return new Date(`${data.scheduled_date}T00:00:00`).getDay();
+ };
+
+ const onIsRecurringChange = (checked: boolean) => {
+ setData((prev) => {
+ const defaultDay = scheduledDateWeekday();
+ return {
+ ...prev,
+ is_recurring: checked,
+ days_of_week: checked && prev.days_of_week.length === 0 && defaultDay !== null ? [defaultDay] : prev.days_of_week,
+ };
+ });
+ };
+
+ const onFrequencyChange = (value: 'weekly' | 'biweekly' | 'monthly') => {
+ setData((prev) => {
+ const defaultDay = scheduledDateWeekday();
+ return {
+ ...prev,
+ frequency: value,
+ days_of_week: (value === 'weekly' || value === 'biweekly') && prev.days_of_week.length === 0 && defaultDay !== null ? [defaultDay] : prev.days_of_week,
+ };
+ });
+ };
+
+ const toggleDay = (day: number) => {
+ setData('days_of_week', data.days_of_week.includes(day) ? data.days_of_week.filter((d) => d !== day) : [...data.days_of_week, day].sort());
+ };
+
+ const close = () => {
+ setOpen(false);
+ reset();
+ clearErrors();
+ setSelectedAddress(null);
+ };
+
+ const submit = (e: FormEvent) => {
+ e.preventDefault();
+ transform((formData) => {
+ const { scheduled_date, scheduled_time, duration_hours, is_recurring, frequency, days_of_week, ends_type, ends_count, ends_on, ...rest } = formData;
+ const scheduled_at = `${scheduled_date} ${scheduled_time || '00:00'}:00`;
+
+ if (!is_recurring) {
+ return { ...rest, scheduled_at, duration_hours: Number(duration_hours), is_recurring: false };
+ }
+
+ return {
+ ...rest,
+ scheduled_at,
+ duration_hours: Number(duration_hours),
+ is_recurring: true,
+ frequency,
+ days_of_week: frequency === 'monthly' ? null : days_of_week,
+ ends_type,
+ ends_count: ends_type === 'count' ? Number(ends_count) : null,
+ ends_on: ends_type === 'date' ? ends_on : null,
+ };
+ });
+ post('/bookings', {
+ preserveScroll: true,
+ onSuccess: () => close(),
+ });
+ };
+
+ return (
+ <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
+ <Button type="button" onClick={() => setOpen(true)} className="gap-1.5">
+ <Plus className="h-4 w-4"/>
+ New booking
+ </Button>
+ <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+ <DialogHeader>
+ <DialogTitle>New booking</DialogTitle>
+ <DialogDescription>Add a booking for a client you already had, or one who booked by phone or text.</DialogDescription>
+ </DialogHeader>
+
+ <form onSubmit={submit} className="grid gap-5">
+ <BookingFormFields
+ data={data}
+ setData={setData}
+ errors={errors}
+ homeTypes={homeTypes}
+ serviceItemCategories={serviceItemCategories}
+ selectedAddress={selectedAddress}
+ onAddressChange={onAddressChange}
+ afterDuration={
  <div className="grid gap-3 rounded-md border border-border p-3">
  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
  <Checkbox checked={data.is_recurring} onCheckedChange={(checked) => onIsRecurringChange(checked === true)}/>
@@ -646,57 +750,142 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
  </div>
  )}
  </div>
-
- <div className="grid gap-1.5">
- <Label htmlFor="payment_method">Payment method</Label>
- <Select value={data.payment_method} onValueChange={(v) => setData('payment_method', v as 'cash' | 'etransfer')}>
- <SelectTrigger id="payment_method" className="w-full">
- <SelectValue placeholder="Select payment method"/>
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="cash">Cash</SelectItem>
- <SelectItem value="etransfer">E-transfer</SelectItem>
- </SelectContent>
- </Select>
- <InputError message={errors.payment_method}/>
- </div>
-
- <div className="grid gap-1.5">
- <Label htmlFor="reminder_minutes_before">Reminder email</Label>
- <Select
- value={data.reminder_minutes_before || 'none'}
- onValueChange={(v) => setData('reminder_minutes_before', v === 'none' ? '' : v)}
- disabled={!data.customer_email}
- >
- <SelectTrigger id="reminder_minutes_before" className="w-full">
- <SelectValue placeholder="No reminder"/>
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="none">No reminder</SelectItem>
- {REMINDER_OPTIONS.map((opt) => (
- <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
- ))}
- </SelectContent>
- </Select>
- {!data.customer_email && <p className="text-xs text-muted-foreground">Add an email to send a reminder.</p>}
- </div>
-
- <div className="grid gap-1.5">
- <Label htmlFor="notes">Notes</Label>
- <textarea
- id="notes"
- value={data.notes}
- onChange={(e) => setData('notes', e.target.value)}
- rows={2}
- className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+ }
  />
- </div>
 
  <Button type="submit" disabled={processing || !selectedAddress} className="mt-2 w-full">
  {processing && <LoaderCircle className="h-4 w-4 animate-spin"/>}
  Add booking
  </Button>
  </form>
+ </DialogContent>
+ </Dialog>
+ );
+}
+
+function bookingToEditForm(booking: Booking): EditBookingFormData {
+ const scheduled = parseFloatingIsoDateTime(booking.scheduled_at);
+
+ return {
+ home_type_id: booking.home_type ? String(booking.home_type.id) : '',
+ service_item_ids: booking.items.map((item) => item.service_item_id),
+ customer_name: booking.customer?.name ?? '',
+ customer_phone: booking.customer?.phone ?? '',
+ customer_email: booking.customer?.email ?? '',
+ customer_address: booking.customer?.address ?? '',
+ latitude: booking.customer?.latitude ?? null,
+ longitude: booking.customer?.longitude ?? null,
+ unit_number: booking.customer?.unit_number ?? '',
+ buzz_code: booking.customer?.buzz_code ?? '',
+ building_instructions: booking.customer?.building_instructions ?? '',
+ postal_code: booking.customer?.postal_code ?? '',
+ scheduled_date: toISODate(scheduled),
+ scheduled_time: `${String(scheduled.getHours()).padStart(2, '0')}:${String(scheduled.getMinutes()).padStart(2, '0')}`,
+ duration_hours: String(booking.duration_hours),
+ payment_method: booking.payment_method ?? '',
+ reminder_minutes_before: booking.reminder_minutes_before ? String(booking.reminder_minutes_before) : '',
+ notes: booking.notes ?? '',
+ };
+}
+
+function bookingToSelectedAddress(booking: Booking): SelectedAddress | null {
+ if (!booking.customer?.address) return null;
+ return {
+ displayName: booking.customer.address,
+ lat: booking.customer.latitude ?? 0,
+ lon: booking.customer.longitude ?? 0,
+ postcode: booking.customer.postal_code ?? '',
+ };
+}
+
+/**
+ * The actual form, keyed by `booking.id` from the parent dialog so switching
+ * which booking is being edited remounts it fresh — simpler than syncing a
+ * `useForm` instance's data across prop changes with useEffect.
+ */
+function EditBookingForm({
+ booking,
+ homeTypes,
+ serviceItemCategories,
+ onClose,
+}: {
+ booking: Booking;
+ homeTypes: HomeType[];
+ serviceItemCategories: ServiceItemCategory[];
+ onClose: () => void;
+}) {
+ const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(() => bookingToSelectedAddress(booking));
+ const { data, setData, patch, processing, errors, transform } = useForm<EditBookingFormData>(bookingToEditForm(booking));
+
+ const onAddressChange = (address: SelectedAddress | null) => {
+ setSelectedAddress(address);
+ setData((prev) => ({
+ ...prev,
+ customer_address: address?.displayName ?? '',
+ latitude: address?.lat ?? null,
+ longitude: address?.lon ?? null,
+ postal_code: address?.postcode || prev.postal_code,
+ }));
+ };
+
+ const submit = (e: FormEvent) => {
+ e.preventDefault();
+ transform((formData) => {
+ const { scheduled_date, scheduled_time, duration_hours, ...rest } = formData;
+ return {
+ ...rest,
+ scheduled_at: `${scheduled_date} ${scheduled_time || '00:00'}:00`,
+ duration_hours: Number(duration_hours),
+ };
+ });
+ patch(`/bookings/${booking.id}`, {
+ preserveScroll: true,
+ onSuccess: () => onClose(),
+ });
+ };
+
+ return (
+ <form onSubmit={submit} className="grid gap-5">
+ <BookingFormFields
+ data={data}
+ setData={setData}
+ errors={errors}
+ homeTypes={homeTypes}
+ serviceItemCategories={serviceItemCategories}
+ selectedAddress={selectedAddress}
+ onAddressChange={onAddressChange}
+ />
+
+ <Button type="submit" disabled={processing || !selectedAddress} className="mt-2 w-full">
+ {processing && <LoaderCircle className="h-4 w-4 animate-spin"/>}
+ Save changes
+ </Button>
+ </form>
+ );
+}
+
+function EditBookingDialog({
+ booking,
+ onClose,
+ homeTypes,
+ serviceItemCategories,
+}: {
+ booking: Booking | null;
+ onClose: () => void;
+ homeTypes: HomeType[];
+ serviceItemCategories: ServiceItemCategory[];
+}) {
+ return (
+ <Dialog open={!!booking} onOpenChange={(next) => !next && onClose()}>
+ <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+ <DialogHeader>
+ <DialogTitle>Edit booking</DialogTitle>
+ <DialogDescription>Update the time, services, or details for this booking.</DialogDescription>
+ </DialogHeader>
+
+ {booking && (
+ <EditBookingForm key={booking.id} booking={booking} homeTypes={homeTypes} serviceItemCategories={serviceItemCategories} onClose={onClose}/>
+ )}
  </DialogContent>
  </Dialog>
  );
@@ -720,6 +909,8 @@ export default function Orders({
  const [paid, setPaid] = useState(filters.paid ?? 'all');
  const [dateFrom, setDateFrom] = useState(filters.date_from ?? '');
  const [dateTo, setDateTo] = useState(filters.date_to ?? '');
+ const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+ const isEditable = (booking: Booking) => booking.status !== 'Cancelled' && booking.status !== 'Completed';
 
  const applyFilters = (next: Partial<{ status: string; paid: string; date_from: string; date_to: string }>) => {
  const merged = {
@@ -790,6 +981,13 @@ export default function Orders({
  </div>
  <NewBookingDialog homeTypes={homeTypes} serviceItemCategories={serviceItemCategories}/>
  </div>
+
+ <EditBookingDialog
+ booking={editingBooking}
+ onClose={() => setEditingBooking(null)}
+ homeTypes={homeTypes}
+ serviceItemCategories={serviceItemCategories}
+ />
 
  <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
  <div className="flex w-full flex-col gap-1.5 sm:w-[10rem]">
@@ -908,6 +1106,16 @@ export default function Orders({
  >
  <CalendarPlus className="w-4 h-4"/>
  </a>
+ {isEditable(booking) && (
+ <button
+ onClick={() => setEditingBooking(booking)}
+ disabled={isPending}
+ title="Edit booking"
+ className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed cursor-pointer"
+ >
+ <Pencil className="w-4 h-4"/>
+ </button>
+ )}
  {booking.status !== 'Cancelled' && booking.status !== 'Completed' && (
  <button
  onClick={() => cancelBooking(booking)}
@@ -1014,6 +1222,16 @@ export default function Orders({
  >
  <CalendarPlus className="w-4 h-4"/>
  </a>
+ {isEditable(booking) && (
+ <button
+ onClick={() => setEditingBooking(booking)}
+ disabled={isPending}
+ title="Edit booking"
+ className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed cursor-pointer"
+ >
+ <Pencil className="w-4 h-4"/>
+ </button>
+ )}
  {booking.status !== 'Cancelled' && booking.status !== 'Completed' && (
  <button
  onClick={() => cancelBooking(booking)}
