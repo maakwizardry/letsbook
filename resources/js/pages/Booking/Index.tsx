@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { 
- Check, 
- ChevronRight, 
- ArrowLeft, 
+ Check,
+ ChevronRight,
+ ChevronLeft,
+ ArrowLeft,
  Plus, 
  Minus,
  ShoppingCart,
@@ -57,7 +58,7 @@ function categoryRank(category: string) {
  return CATEGORY_ORDER.length;
 }
 
-export default function BookingWizard({ provider, availability = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[] }) {
+export default function BookingWizard({ provider, availability = [], blockedDates = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[]; blockedDates?: string[] }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
  const [step, setStep] = useState(1);
  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
@@ -291,34 +292,82 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  }
  };
 
- // Date/Time Generators
- const dates = useMemo(() => {
- const arr = [];
- const today = new Date();
- for (let i = 0; i < 14; i++) {
- const d = new Date(today);
- d.setDate(today.getDate() + i);
- arr.push({
- dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
- dayNumber: d.getDate(),
- dayOfWeek: d.getDay(),
- // Build the value from local date parts, not toISOString() — that
- // converts to UTC first, which silently rolls "today" over to
- // tomorrow's date for any viewer west of UTC once it's past 8pm-ish
- // local time, even though dayNumber/dayOfWeek above (correctly local)
- // still show today. That mismatch meant the booked-slots lookup and
- // the final scheduled_at could both target the wrong calendar day.
- value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
- isToday: i === 0
+ // Calendar: how far ahead customers can book, and which month is shown
+ const BOOKING_HORIZON_DAYS = 90;
+
+ const [viewedMonth, setViewedMonth] = useState(() => {
+ const d = new Date();
+ return { year: d.getFullYear(), month: d.getMonth() };
+ });
+ const [isCalendarOpen, setIsCalendarOpen] = useState(true);
+
+ // Build local Y-M-D strings, not toISOString() — that converts to UTC
+ // first, which silently rolls "today" over to tomorrow's date for any
+ // viewer west of UTC once it's past 8pm-ish local time. That mismatch
+ // meant the booked-slots lookup and the final scheduled_at could both
+ // target the wrong calendar day.
+ const toLocalValue = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+ const todayValue = useMemo(() => toLocalValue(new Date()), []);
+ const startOfToday = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+ const horizonDate = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + BOOKING_HORIZON_DAYS); return d; }, []);
+ const todayInfo = useMemo(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; }, []);
+ const horizonInfo = useMemo(() => { const d = horizonDate; return { year: d.getFullYear(), month: d.getMonth() }; }, [horizonDate]);
+
+ const blockedDatesSet = useMemo(() => new Set(blockedDates), [blockedDates]);
+
+ const calendarCells = useMemo(() => {
+ const { year, month } = viewedMonth;
+ const startWeekday = new Date(year, month, 1).getDay();
+ const daysInMonth = new Date(year, month + 1, 0).getDate();
+ const cells: Array<
+ | { type: 'blank'; key: string }
+ | { type: 'day'; value: string; dayNumber: number; dayOfWeek: number; isToday: boolean; disabled: boolean }
+ > = [];
+
+ for (let i = 0; i < startWeekday; i++) cells.push({ type: 'blank', key: `lead-${i}` });
+
+ for (let day = 1; day <= daysInMonth; day++) {
+ const cellDate = new Date(year, month, day);
+ const dayOfWeek = cellDate.getDay();
+ const value = toLocalValue(cellDate);
+ const isPast = cellDate < startOfToday;
+ const isBeyondHorizon = cellDate > horizonDate;
+ const isUnavailableWeekday = !availability.some((a: any) => a.day_of_week === dayOfWeek);
+ const isBlocked = blockedDatesSet.has(value);
+ cells.push({
+ type: 'day',
+ value,
+ dayNumber: day,
+ dayOfWeek,
+ isToday: value === todayValue,
+ disabled: isPast || isBeyondHorizon || isUnavailableWeekday || isBlocked,
  });
  }
- return arr;
- }, []);
 
- const selectedDayOfWeek = useMemo(
- () => dates.find(d => d.value === selectedDate)?.dayOfWeek,
- [dates, selectedDate]
- );
+ const trailing = (7 - (cells.length % 7)) % 7;
+ for (let i = 0; i < trailing; i++) cells.push({ type: 'blank', key: `trail-${i}` });
+
+ return cells;
+ }, [viewedMonth, availability, todayValue, startOfToday, horizonDate, blockedDatesSet]);
+
+ const canGoPrevMonth = viewedMonth.year > todayInfo.year || (viewedMonth.year === todayInfo.year && viewedMonth.month > todayInfo.month);
+ const canGoNextMonth = viewedMonth.year < horizonInfo.year || (viewedMonth.year === horizonInfo.year && viewedMonth.month < horizonInfo.month);
+
+ const goToPrevMonth = () => {
+ if (!canGoPrevMonth) return;
+ setViewedMonth(v => (v.month === 0 ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 }));
+ };
+ const goToNextMonth = () => {
+ if (!canGoNextMonth) return;
+ setViewedMonth(v => (v.month === 11 ? { year: v.year + 1, month: 0 } : { year: v.year, month: v.month + 1 }));
+ };
+
+ const selectedDayOfWeek = useMemo(() => {
+ if (!selectedDate) return undefined;
+ const [y, m, d] = selectedDate.split('-').map(Number);
+ return new Date(y, m - 1, d).getDay();
+ }, [selectedDate]);
 
  const timeSlots = useMemo(() => {
  if (selectedDayOfWeek === undefined) return [];
@@ -648,45 +697,96 @@ export default function BookingWizard({ provider, availability = [] }: { provide
  </button>
  </div>
 
- {/* Horizontal Date Picker */}
+ {/* Calendar Date Picker */}
  <div className="bg-card pt-6 pb-4 border-b border-border sticky top-14 z-40">
  <div className="px-4 mb-4 flex items-center justify-between">
  <h2 className="text-xl font-bold font-heading text-foreground">When do you need us?</h2>
  <CalendarDays className="w-5 h-5 text-muted-foreground"/>
  </div>
 
- <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2 gap-3 snap-x">
- {dates.map((d, i) => {
- const isSelected = selectedDate === d.value;
- const isAvailable = availability.some((a: any) => a.day_of_week === d.dayOfWeek);
+ {!isCalendarOpen && selectedDate ? (
+ <div className="px-4 flex items-center justify-between">
+ <span className="text-base font-semibold text-foreground">
+ {new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+ </span>
+ <button
+ onClick={() => {
+ setIsCalendarOpen(true);
+ const [y, m] = selectedDate.split('-').map(Number);
+ setViewedMonth({ year: y, month: m - 1 });
+ }}
+ className="font-semibold text-primary hover:underline cursor-pointer text-sm rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+ >
+ Change
+ </button>
+ </div>
+ ) : (
+ <div className="px-4">
+ <div className="flex items-center justify-between mb-3">
+ <button
+ onClick={goToPrevMonth}
+ disabled={!canGoPrevMonth}
+ aria-label="Previous month"
+ className={`p-2 rounded-full transition-colors ${!canGoPrevMonth ? 'text-muted-foreground/30 cursor-not-allowed' : 'text-foreground hover:bg-accent cursor-pointer'}`}
+ >
+ <ChevronLeft className="w-5 h-5"/>
+ </button>
+ <span className="text-sm font-semibold text-foreground">
+ {new Date(viewedMonth.year, viewedMonth.month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+ </span>
+ <button
+ onClick={goToNextMonth}
+ disabled={!canGoNextMonth}
+ aria-label="Next month"
+ className={`p-2 rounded-full transition-colors ${!canGoNextMonth ? 'text-muted-foreground/30 cursor-not-allowed' : 'text-foreground hover:bg-accent cursor-pointer'}`}
+ >
+ <ChevronRight className="w-5 h-5"/>
+ </button>
+ </div>
+
+ <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+ {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(w => (
+ <div key={w} className="text-center text-xs font-semibold text-muted-foreground/70 py-1">{w}</div>
+ ))}
+ </div>
+
+ <div className="grid grid-cols-7 gap-1.5">
+ {calendarCells.map((cell, i) => {
+ if (cell.type === 'blank') return <div key={cell.key} aria-hidden="true"/>;
+ const isSelected = selectedDate === cell.value;
  return (
  <button
- key={d.value}
- disabled={!isAvailable}
+ key={cell.value}
+ disabled={cell.disabled}
  onClick={() => {
- setSelectedDate(d.value);
+ setSelectedDate(cell.value);
  setSelectedTime('');
+ setIsCalendarOpen(false);
  }}
  aria-pressed={isSelected}
- style={{ animationDelay: `${i * 30}ms` }}
- className={`anim-stagger-item flex-shrink-0 w-[4.5rem] p-3 rounded-2xl border-2 flex flex-col items-center justify-center snap-start transition-[transform,box-shadow,border-color,background-color] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
- !isAvailable
+ style={{ animationDelay: `${Math.floor(i / 7) * 40}ms` }}
+ className={`anim-stagger-item relative aspect-square rounded-xl border-2 flex items-center justify-center text-sm font-semibold transition-[transform,box-shadow,border-color,background-color] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+ cell.disabled
  ? 'border-transparent bg-muted text-muted-foreground/50 cursor-not-allowed'
  : `hover:-translate-y-0.5 active:scale-[0.97] cursor-pointer ${
- isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/30'
+ isSelected
+ ? 'border-primary bg-primary/5 shadow-sm text-primary'
+ : cell.isToday
+ ? 'border-primary/40 bg-card text-foreground'
+ : 'border-border bg-card text-foreground hover:border-primary/30'
  }`
  }`}
  >
- <span className={`text-xs uppercase font-semibold mb-1 ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
- {d.isToday ? 'Today' : d.dayLabel}
- </span>
- <span className={`text-xl font-bold ${!isAvailable ? '' : isSelected ? 'text-primary' : 'text-foreground'}`}>
- {d.dayNumber}
- </span>
+ {cell.dayNumber}
+ {cell.isToday && (
+ <span className={`absolute bottom-1 w-1 h-1 rounded-full ${cell.disabled ? 'bg-muted-foreground/40' : 'bg-primary'}`} aria-hidden="true"/>
+ )}
  </button>
- )
+ );
  })}
  </div>
+ </div>
+ )}
  </div>
 
  {/* Time Slots */}

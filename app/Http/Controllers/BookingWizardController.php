@@ -25,8 +25,11 @@ class BookingWizardController extends Controller
                 'end_time' => substr($availability->end_time, 0, 5),
             ]);
 
+        $blockedDates = $provider->blockedDates()->where('date', '>=', today())->orderBy('date')->pluck('date')->map->toDateString();
+
         return Inertia::render('Booking/Index', [
             'availability' => $availability,
+            'blockedDates' => $blockedDates,
             'provider' => [
                 'id' => $provider->id,
                 'name' => $provider->name,

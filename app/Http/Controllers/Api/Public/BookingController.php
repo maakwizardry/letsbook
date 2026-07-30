@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\BlockedDate;
 use App\Models\BookingItem;
 use App\Models\Customer;
 use App\Models\HomeType;
@@ -48,9 +49,24 @@ class BookingController extends Controller
         $providerId = $homeType->provider_id;
 
         $items = ServiceItem::whereIn('id', $validated['service_item_ids'])->get();
+
+        if ($items->contains(fn (ServiceItem $item) => ! $item->is_active)) {
+            return response()->json([
+                'message' => 'One of the selected services is no longer available.',
+                'errors' => ['service_item_ids' => ['One of the selected services is no longer available.']]
+            ], 422);
+        }
+
         $total = $items->sum('price');
 
         $scheduledAt = \Carbon\Carbon::parse($validated['scheduled_at']);
+
+        if (BlockedDate::where('provider_id', $providerId)->whereDate('date', $scheduledAt->toDateString())->exists()) {
+            return response()->json([
+                'message' => 'This date is not available.',
+                'errors' => ['scheduled_at' => ['This date is not available.']]
+            ], 422);
+        }
 
         // Assuming 1 hour blocks. Check if any active booking overlaps with this time.
         // Overlap occurs if an existing booking's time is within 1 hour before or after the new time.
@@ -134,7 +150,7 @@ class BookingController extends Controller
             $booking->provider->notify(new NewBookingNotification($booking));
         }
 
-        if ($customer->email) {
+        if ($customer->email && $booking->provider->notifications_enabled) {
             \Illuminate\Support\Facades\Notification::route('mail', $customer->email)->notify(new BookingConfirmationNotification($booking));
         }
 
