@@ -24,8 +24,18 @@ class AvailabilityController extends Controller
                 'end_time' => substr($availability->end_time, 0, 5),
             ]);
 
+        $blockedDates = $request->user()->blockedDates()
+            ->orderBy('date')
+            ->get()
+            ->map(fn ($blockedDate) => [
+                'id' => $blockedDate->id,
+                'date' => $blockedDate->date->toDateString(),
+                'reason' => $blockedDate->reason,
+            ]);
+
         return Inertia::render('availability', [
             'schedule' => $schedule,
+            'blockedDates' => $blockedDates,
         ]);
     }
 

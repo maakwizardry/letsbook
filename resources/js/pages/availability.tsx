@@ -2,9 +2,10 @@ import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Clock, Plus, Trash2 } from 'lucide-react';
+import { CalendarOff, Clock, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -30,6 +31,17 @@ interface DayRow {
  label: string;
  enabled: boolean;
  ranges: Range[];
+}
+
+interface BlockedDateRow {
+ id: number;
+ date: string;
+ reason: string | null;
+}
+
+function formatBlockedDate(isoDate: string) {
+ const [y, m, d] = isoDate.split('-').map(Number);
+ return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function addHour(time: string): string {
@@ -59,12 +71,55 @@ function serializeForCompare(days: DayRow[]) {
  );
 }
 
-export default function Availability({ schedule }: { schedule: ScheduleRange[] }) {
+export default function Availability({
+ schedule,
+ blockedDates = [],
+}: {
+ schedule: ScheduleRange[];
+ blockedDates?: BlockedDateRow[];
+}) {
  const [days, setDays] = useState<DayRow[]>(() => buildInitialDays(schedule));
  const [initialSnapshot] = useState(() => serializeForCompare(buildInitialDays(schedule)));
  const [isSaving, setIsSaving] = useState(false);
  const [error, setError] = useState('');
  const [justSaved, setJustSaved] = useState(false);
+
+ const todayValue = useMemo(() => {
+ const d = new Date();
+ return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+ }, []);
+ const [newBlockedDate, setNewBlockedDate] = useState('');
+ const [newBlockedReason, setNewBlockedReason] = useState('');
+ const [isAddingBlockedDate, setIsAddingBlockedDate] = useState(false);
+ const [blockedDateError, setBlockedDateError] = useState('');
+ const [removingBlockedDateIds, setRemovingBlockedDateIds] = useState<Set<number>>(new Set());
+
+ const addBlockedDate = () => {
+ if (!newBlockedDate) return;
+ setIsAddingBlockedDate(true);
+ setBlockedDateError('');
+ router.post(
+ '/blocked-dates',
+ { date: newBlockedDate, reason: newBlockedReason || null },
+ {
+ preserveScroll: true,
+ onSuccess: () => {
+ setNewBlockedDate('');
+ setNewBlockedReason('');
+ },
+ onError: (errors) => setBlockedDateError(errors.date ?? 'Could not block that date.'),
+ onFinish: () => setIsAddingBlockedDate(false),
+ },
+ );
+ };
+
+ const removeBlockedDate = (id: number) => {
+ setRemovingBlockedDateIds((prev) => new Set(prev).add(id));
+ router.delete(`/blocked-dates/${id}`, {
+ preserveScroll: true,
+ onFinish: () => setRemovingBlockedDateIds((prev) => { const next = new Set(prev); next.delete(id); return next; }),
+ });
+ };
 
  const isDirty = useMemo(() => serializeForCompare(days) !== initialSnapshot, [days, initialSnapshot]);
 
@@ -219,6 +274,58 @@ export default function Availability({ schedule }: { schedule: ScheduleRange[] }
  )}
  </div>
  ))}
+ </div>
+
+ <div className="mt-8">
+ <div className="mb-4">
+ <h2 className="text-lg font-bold font-heading text-foreground">Blocked dates</h2>
+ <p className="mt-1 text-sm text-muted-foreground">Block off specific days — like a vacation — without changing your weekly schedule. Customers won’t be able to book you on these dates.</p>
+ </div>
+
+ <div className="rounded-2xl border border-border bg-card shadow-sm p-5">
+ <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+ <div className="grid gap-1.5">
+ <Label htmlFor="blocked-date">Date</Label>
+ <Input id="blocked-date" type="date" min={todayValue} value={newBlockedDate} onChange={(e) => setNewBlockedDate(e.target.value)} className="w-44"/>
+ </div>
+ <div className="grid gap-1.5 flex-1">
+ <Label htmlFor="blocked-reason">Reason <span className="font-normal text-muted-foreground">(optional)</span></Label>
+ <Input id="blocked-reason" value={newBlockedReason} onChange={(e) => setNewBlockedReason(e.target.value)} placeholder="e.g. Vacation"/>
+ </div>
+ <Button type="button" onClick={addBlockedDate} disabled={!newBlockedDate || isAddingBlockedDate} className="gap-1.5">
+ <Plus className="h-4 w-4"/>
+ Block this date
+ </Button>
+ </div>
+ {blockedDateError && <p className="mt-2 text-xs text-destructive">{blockedDateError}</p>}
+
+ {blockedDates.length > 0 && (
+ <div className="mt-5 divide-y divide-border border-t border-border">
+ {blockedDates.map((blocked) => (
+ <div key={blocked.id} className="flex items-center justify-between gap-3 py-3">
+ <div className="flex items-center gap-2 text-sm">
+ <CalendarOff className="h-4 w-4 text-muted-foreground shrink-0"/>
+ <span className="font-semibold text-foreground">{formatBlockedDate(blocked.date)}</span>
+ {blocked.reason && <span className="text-muted-foreground">— {blocked.reason}</span>}
+ </div>
+ <Button
+ type="button"
+ variant="ghost"
+ size="icon"
+ onClick={() => removeBlockedDate(blocked.id)}
+ disabled={removingBlockedDateIds.has(blocked.id)}
+ aria-label="Remove blocked date"
+ >
+ <Trash2 className="h-4 w-4 text-muted-foreground"/>
+ </Button>
+ </div>
+ ))}
+ </div>
+ )}
+ {blockedDates.length === 0 && (
+ <p className="mt-4 text-sm text-muted-foreground">No blocked dates — your calendar is fully open based on your weekly schedule above.</p>
+ )}
+ </div>
  </div>
  </div>
  </AppLayout>

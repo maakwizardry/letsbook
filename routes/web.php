@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookingWizardController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\Provider\AvailabilityController;
+use App\Http\Controllers\Provider\BlockedDateController;
 use App\Http\Controllers\Provider\BookingController as ProviderBookingController;
 use App\Http\Controllers\Provider\BookingSeriesController;
 use App\Http\Controllers\Provider\CustomerController;
@@ -26,7 +27,10 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('booking-series/{bookingSeries}', [BookingSeriesController::class, 'stop'])->name('booking-series.stop');
     Route::get('availability', [AvailabilityController::class, 'index'])->name('availability');
     Route::put('availability', [AvailabilityController::class, 'update'])->name('availability.update');
+    Route::post('blocked-dates', [BlockedDateController::class, 'store'])->name('blocked-dates.store');
+    Route::delete('blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy'])->name('blocked-dates.destroy');
     Route::get('services', [ServiceController::class, 'index'])->name('services');
+    Route::post('services', [ServiceController::class, 'store'])->name('services.store');
     Route::patch('services/{service}', [ServiceController::class, 'update'])->name('services.update');
 });
 
