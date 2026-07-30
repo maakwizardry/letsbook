@@ -12,6 +12,7 @@ class CreateProviderController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'cover_image_url' => 'nullable|url|max:2048',
         ]);
 
         if ($existing = $onboarding->findByName($validated['name'])) {
@@ -26,7 +27,7 @@ class CreateProviderController extends Controller
             ], 409);
         }
 
-        $result = $onboarding->create($validated['name']);
+        $result = $onboarding->create($validated['name'], null, $validated['cover_image_url'] ?? null);
 
         return response()->json([
             'provider' => $result['provider'],

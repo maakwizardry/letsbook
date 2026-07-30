@@ -7,6 +7,8 @@ use Illuminate\Support\Str;
 
 class ProviderOnboardingService
 {
+    public function __construct(private RemoteImageDownloader $imageDownloader) {}
+
     /**
      * Find an existing provider by name (case-insensitive exact match).
      */
@@ -18,9 +20,13 @@ class ProviderOnboardingService
     /**
      * Create a provider with a dummy email/password and a starter catalog,
      * returning it alongside three outreach message variants pointing them
-     * to their new booking page.
+     * to their new booking page. If $coverImageUrl is given, it's fetched
+     * and attached as the cover image — but a failed download (bad URL,
+     * unreachable, not an image, blocked host, etc.) never blocks provider
+     * creation; cover_image_path just stays null and the booking page
+     * falls back to its existing default cover image.
      */
-    public function create(string $name, ?string $externalUrl = null): array
+    public function create(string $name, ?string $externalUrl = null, ?string $coverImageUrl = null): array
     {
         $slug = Str::slug($name) ?: Str::random(8);
         $uniqueSlug = $slug;
@@ -37,6 +43,14 @@ class ProviderOnboardingService
         ]);
 
         $provider->seedDefaultCatalog();
+
+        if ($coverImageUrl) {
+            $path = $this->imageDownloader->download($coverImageUrl, 'covers');
+
+            if ($path) {
+                $provider->update(['cover_image_path' => $path]);
+            }
+        }
 
         return [
             'provider' => $provider,

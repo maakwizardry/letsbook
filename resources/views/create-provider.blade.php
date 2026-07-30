@@ -195,9 +195,9 @@
             }
         }
 
-        async function copyRandomVariant(variants, providerName) {
+        async function copyRandomVariant(variants, providerName, coverNote) {
             if (!variants || variants.length === 0) {
-                setStatus(`Created "${providerName}". No outreach variants to copy.`);
+                setStatus(`Created "${providerName}".${coverNote} No outreach variants to copy.`);
                 return;
             }
 
@@ -208,9 +208,9 @@
 
             try {
                 await navigator.clipboard.writeText(variant.message);
-                setStatus(`Created "${providerName}". Copied "${variant.label}" to your clipboard — just paste it.`);
+                setStatus(`Created "${providerName}".${coverNote} Copied "${variant.label}" to your clipboard — just paste it.`);
             } catch (err) {
-                setStatus(`Created "${providerName}". Couldn't auto-copy (clipboard blocked) — use the Copy button on "${variant.label}".`, true);
+                setStatus(`Created "${providerName}".${coverNote} Couldn't auto-copy (clipboard blocked) — use the Copy button on "${variant.label}".`, true);
             }
         }
 
@@ -226,6 +226,9 @@
                 return;
             }
 
+            const coverImageUrlInput = window.prompt('Cover image URL (optional, leave blank to skip):');
+            const coverImageUrl = coverImageUrlInput ? coverImageUrlInput.trim() : '';
+
             setStatus(`Creating "${trimmed}"...`);
             variantsEl.innerHTML = '';
 
@@ -236,7 +239,10 @@
                         'Content-Type': 'application/json',
                         Accept: 'application/json',
                     },
-                    body: JSON.stringify({ name: trimmed }),
+                    body: JSON.stringify({
+                        name: trimmed,
+                        cover_image_url: coverImageUrl || null,
+                    }),
                 });
 
                 const data = await response.json();
@@ -244,7 +250,12 @@
                 if (response.status === 201) {
                     renderVariants(data.messages);
                     incrementSessionCounter();
-                    await copyRandomVariant(data.messages, data.provider.name);
+                    const coverNote = !coverImageUrl
+                        ? ''
+                        : data.provider.cover_image_path
+                            ? ' Cover image attached.'
+                            : ' Cover image download failed — using the default.';
+                    await copyRandomVariant(data.messages, data.provider.name, coverNote);
                 } else if (response.status === 409) {
                     renderVariants(data.outreach_messages);
                     setStatus(`"${data.provider.name}" already exists. Here are their messages again.`);
