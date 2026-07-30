@@ -36,7 +36,7 @@ class SendBookingReminders extends Command
             ->get();
 
         foreach ($bookings as $booking) {
-            if ($booking->customer && $booking->customer->email) {
+            if ($booking->customer && $booking->customer->email && $booking->provider?->notifications_enabled) {
                 Notification::route('mail', $booking->customer->email)
                     ->notify(new BookingReminderNotification($booking));
             }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BusinessController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -15,4 +16,8 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('password.edit');
     Route::put('settings/password', [PasswordController::class, 'update'])->name('password.update');
 
+    Route::get('settings/business', [BusinessController::class, 'edit'])->name('business.edit');
+    Route::patch('settings/business/name', [BusinessController::class, 'updateName'])->name('business.name.update');
+    Route::post('settings/business/photo', [BusinessController::class, 'updatePhoto'])->name('business.photo.update');
+    Route::patch('settings/business/notifications', [BusinessController::class, 'updateNotifications'])->name('business.notifications.update');
 });

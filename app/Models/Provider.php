@@ -28,6 +28,7 @@ class Provider extends Authenticatable
         'is_insured',
         'is_background_checked',
         'has_satisfaction_guarantee',
+        'notifications_enabled',
     ];
 
     protected $hidden = [
@@ -42,6 +43,7 @@ class Provider extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'invitation_token' => 'hashed',
+            'notifications_enabled' => 'boolean',
         ];
     }
 
@@ -68,6 +70,11 @@ class Provider extends Authenticatable
     public function availabilities()
     {
         return $this->hasMany(Availability::class);
+    }
+
+    public function blockedDates()
+    {
+        return $this->hasMany(BlockedDate::class);
     }
 
     /**
