@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Check, Pencil, Tags, X } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Plus, Pencil, Tags, X } from 'lucide-react';
+import { FormEvent, useMemo, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
  { title: 'Services', href: '/services' },
@@ -15,11 +16,18 @@ interface ServiceItemRow {
  name: string;
  price: number;
  home_type_label: string | null;
+ home_type_id: number | null;
+ is_active: boolean;
 }
 
 interface ServiceCategory {
  category: string;
  items: ServiceItemRow[];
+}
+
+interface HomeType {
+ id: number;
+ label: string;
 }
 
 function formatMoney(value: number) {
@@ -67,6 +75,125 @@ function useServiceItemEditor(item: ServiceItemRow) {
  return { isEditing, name, price, setName, setPrice, startEdit, cancelEdit, save, pending, error, canSave };
 }
 
+function useActiveToggle(item: ServiceItemRow) {
+ const [pending, setPending] = useState(false);
+
+ const toggle = () => {
+ setPending(true);
+ router.patch(
+ `/services/${item.id}`,
+ { is_active: !item.is_active },
+ { preserveScroll: true, onFinish: () => setPending(false) },
+ );
+ };
+
+ return { toggle, pending };
+}
+
+function ActiveToggleButton({ item }: { item: ServiceItemRow }) {
+ const { toggle, pending } = useActiveToggle(item);
+
+ return (
+ <button
+ type="button"
+ onClick={toggle}
+ disabled={pending}
+ className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed ${
+ item.is_active
+ ? 'bg-success/10 text-success border-success/20 hover:bg-success/15'
+ : 'bg-muted text-muted-foreground border-border hover:bg-accent'
+ }`}
+ >
+ {item.is_active ? <Check className="h-3 w-3"/> : null}
+ {item.is_active ? 'Active' : 'Inactive'}
+ </button>
+ );
+}
+
+function NewServiceForm({
+ homeTypes,
+ categoryOptions,
+ onClose,
+}: {
+ homeTypes: HomeType[];
+ categoryOptions: string[];
+ onClose: () => void;
+}) {
+ const [name, setName] = useState('');
+ const [price, setPrice] = useState('');
+ const [category, setCategory] = useState('');
+ const [homeTypeId, setHomeTypeId] = useState('');
+ const [pending, setPending] = useState(false);
+ const [error, setError] = useState('');
+
+ const priceValue = Number(price);
+ const canSave = name.trim() !== '' && price.trim() !== '' && !Number.isNaN(priceValue) && priceValue >= 0;
+
+ const submit = (e: FormEvent) => {
+ e.preventDefault();
+ if (!canSave) return;
+ setPending(true);
+ setError('');
+ router.post(
+ '/services',
+ {
+ name: name.trim(),
+ price: priceValue,
+ category: category.trim() || null,
+ home_type_id: homeTypeId ? Number(homeTypeId) : null,
+ },
+ {
+ preserveScroll: true,
+ onSuccess: () => onClose(),
+ onError: (errors) => setError(Object.values(errors).flat().join(' ') || 'Could not add service. Please try again.'),
+ onFinish: () => setPending(false),
+ },
+ );
+ };
+
+ return (
+ <form onSubmit={submit} className="mb-8 rounded-2xl border border-primary/30 bg-card p-5 shadow-sm">
+ <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-foreground">Add a service</h2>
+ <div className="grid gap-3 sm:grid-cols-2">
+ <div className="grid gap-1.5">
+ <Label htmlFor="new-service-name">Name</Label>
+ <Input id="new-service-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Window Cleaning" required/>
+ </div>
+ <div className="grid gap-1.5">
+ <Label htmlFor="new-service-price">Price</Label>
+ <Input id="new-service-price" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} required/>
+ </div>
+ <div className="grid gap-1.5">
+ <Label htmlFor="new-service-category">Category <span className="font-normal text-muted-foreground">(optional)</span></Label>
+ <Input id="new-service-category" list="service-category-options" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Add-ons"/>
+ <datalist id="service-category-options">
+ {categoryOptions.map((c) => <option key={c} value={c}/>)}
+ </datalist>
+ </div>
+ <div className="grid gap-1.5">
+ <Label htmlFor="new-service-home-type">Home type <span className="font-normal text-muted-foreground">(optional)</span></Label>
+ <select
+ id="new-service-home-type"
+ value={homeTypeId}
+ onChange={(e) => setHomeTypeId(e.target.value)}
+ className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+ >
+ <option value="">No specific home type (add-on)</option>
+ {homeTypes.map((ht) => (
+ <option key={ht.id} value={ht.id}>{ht.label}</option>
+ ))}
+ </select>
+ </div>
+ </div>
+ {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
+ <div className="mt-4 flex items-center gap-2">
+ <Button type="submit" size="sm" disabled={!canSave || pending}>Add service</Button>
+ <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={pending}>Cancel</Button>
+ </div>
+ </form>
+ );
+}
+
 function ServiceCard({ item, showHomeType }: { item: ServiceItemRow; showHomeType: boolean }) {
  const editor = useServiceItemEditor(item);
 
@@ -103,14 +230,20 @@ function ServiceCard({ item, showHomeType }: { item: ServiceItemRow; showHomeTyp
  }
 
  return (
- <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+ <div className={`rounded-2xl border border-border bg-card p-4 shadow-sm ${!item.is_active ? 'opacity-60' : ''}`}>
  <div className="flex items-start justify-between gap-2">
  <div className="min-w-0">
+ <div className="flex items-center gap-1.5">
  <div className="font-medium text-foreground">{item.name}</div>
+ {!item.is_active && (
+ <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inactive</span>
+ )}
+ </div>
  {showHomeType && <div className="mt-0.5 text-xs text-muted-foreground">{item.home_type_label}</div>}
  </div>
  <div className="flex items-center gap-1">
  <div className="font-semibold text-foreground whitespace-nowrap">{formatMoney(item.price)}</div>
+ <ActiveToggleButton item={item}/>
  <Button type="button" size="icon" variant="ghost" onClick={editor.startEdit} aria-label="Edit service">
  <Pencil className="h-3.5 w-3.5 text-muted-foreground"/>
  </Button>
@@ -154,32 +287,66 @@ function ServiceTableRow({ item, showHomeType }: { item: ServiceItemRow; showHom
  }
 
  return (
- <tr className="transition-colors hover:bg-accent/40">
- <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">{item.name}</td>
+ <tr className={`transition-colors hover:bg-accent/40 ${!item.is_active ? 'opacity-60' : ''}`}>
+ <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">
+ <div className="flex items-center gap-1.5">
+ {item.name}
+ {!item.is_active && (
+ <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inactive</span>
+ )}
+ </div>
+ </td>
  {showHomeType && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.home_type_label}</td>}
  <td className="px-4 py-3 whitespace-nowrap">
  <div className="flex items-center justify-between gap-2">
  <span className="font-semibold text-foreground">{formatMoney(item.price)}</span>
+ <div className="flex items-center gap-1">
+ <ActiveToggleButton item={item}/>
  <Button type="button" size="icon" variant="ghost" onClick={editor.startEdit} aria-label="Edit service">
  <Pencil className="h-3.5 w-3.5 text-muted-foreground"/>
  </Button>
+ </div>
  </div>
  </td>
  </tr>
  );
 }
 
-export default function Services({ categories, total_count }: { categories: ServiceCategory[]; total_count: number }) {
+export default function Services({
+ categories,
+ total_count,
+ homeTypes = [],
+}: {
+ categories: ServiceCategory[];
+ total_count: number;
+ homeTypes?: HomeType[];
+}) {
+ const [isAdding, setIsAdding] = useState(false);
+
+ const categoryOptions = useMemo(() => categories.map((c) => c.category), [categories]);
+
  return (
  <AppLayout breadcrumbs={breadcrumbs}>
  <Head title="Services"/>
  <div className="mx-auto w-full max-w-6xl px-4 py-8">
- <div className="mb-6">
+ <div className="mb-6 flex items-start justify-between gap-4">
+ <div>
  <h1 className="text-2xl font-bold font-heading text-foreground">Services</h1>
  <p className="mt-1 text-sm text-muted-foreground">
  {total_count} service{total_count === 1 ? '' : 's'} across {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}
  </p>
  </div>
+ {!isAdding && (
+ <Button type="button" onClick={() => setIsAdding(true)} className="gap-1.5">
+ <Plus className="h-4 w-4"/>
+ Add service
+ </Button>
+ )}
+ </div>
+
+ {isAdding && (
+ <NewServiceForm homeTypes={homeTypes} categoryOptions={categoryOptions} onClose={() => setIsAdding(false)}/>
+ )}
 
  {categories.length === 0 ? (
  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center">

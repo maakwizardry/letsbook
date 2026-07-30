@@ -19,6 +19,7 @@ class ServiceItemController extends Controller
 
         $items = ServiceItem::select('id', 'name', 'price', 'category', 'home_type_id')
             ->where('provider_id', $homeType->provider_id)
+            ->where('is_active', true)
             ->where(function ($q) use ($request) {
                 $q->where('home_type_id', $request->home_type_id)
                   ->orWhereNull('home_type_id');

@@ -9,7 +9,11 @@ class ServiceItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['provider_id', 'name', 'price', 'category', 'home_type_id'];
+    protected $fillable = ['provider_id', 'name', 'price', 'category', 'home_type_id', 'is_active'];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function provider()
     {
