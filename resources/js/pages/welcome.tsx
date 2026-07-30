@@ -1,3 +1,4 @@
+import BrowserFrame from '@/components/browser-frame';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
@@ -226,26 +227,7 @@ function ProductTour() {
  </div>
 
  <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
- <div className="relative">
- <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 via-chart-4/10 to-chart-2/20 rounded-[2.5rem] blur-2xl" aria-hidden="true"/>
- <div className="relative bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
- <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-muted/50">
- <span className="w-2.5 h-2.5 rounded-full bg-destructive/40"/>
- <span className="w-2.5 h-2.5 rounded-full bg-chart-3/40"/>
- <span className="w-2.5 h-2.5 rounded-full bg-success/40"/>
- <span className="ml-3 text-xs font-medium text-muted-foreground truncate">{tab.url}</span>
- </div>
- <img
- src={tab.image}
- alt={`${tab.label} screenshot`}
- width={tab.imageWidth}
- height={tab.imageHeight}
- loading="lazy"
- decoding="async"
- className="w-full h-auto block"
- />
- </div>
- </div>
+ <BrowserFrame url={tab.url} image={tab.image} imageWidth={tab.imageWidth} imageHeight={tab.imageHeight} alt={`${tab.label} screenshot`}/>
  </div>
  </div>
  ))}
@@ -367,7 +349,7 @@ function EmailStory() {
 const SITE_URL = 'https://letsbook.maakhq.com';
 const PAGE_TITLE = 'LetsBook — Online Booking Software for Home Cleaning Businesses';
 const PAGE_DESCRIPTION =
- 'Give your home cleaning business a booking page customers love. Automated scheduling, reminders, and one dashboard for every job — $129 one-time, no monthly fees.';
+ 'Give your home cleaning business a booking page customers love. Automated scheduling, reminders, and one dashboard for every job — $449 one-time, no monthly fees.';
 const OG_IMAGE = `${SITE_URL}/images/og-image.jpg`;
 
 const STRUCTURED_DATA = {
@@ -381,7 +363,7 @@ const STRUCTURED_DATA = {
  image: OG_IMAGE,
  offers: {
  '@type': 'Offer',
- price: '129',
+ price: '449',
  priceCurrency: 'USD',
  },
 };
@@ -486,7 +468,7 @@ export default function Welcome() {
  href={route('register')}
  className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 hover:opacity-90 active:scale-95 transition-all"
  >
- Get Yours Now — $129 Lifetime
+ Get Yours Now — $449 Lifetime
  <ArrowRight className="w-4 h-4"/>
  </Link>
  <a
@@ -607,7 +589,7 @@ export default function Welcome() {
  </div>
  <div className="flex items-end justify-center gap-1 mb-1">
  <span className="text-2xl font-black font-heading text-foreground self-start mt-2">$</span>
- <span className="text-6xl font-black font-heading text-foreground">129</span>
+ <span className="text-6xl font-black font-heading text-foreground">449</span>
  </div>
  <p className="text-muted-foreground font-medium mb-8">one-time payment · lifetime access</p>
 
