@@ -95,6 +95,20 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // Wizard intro state
  const [wizardStarted, setWizardStarted] = useState(false);
 
+ // Both layers: the semantic var itself, and Tailwind's `--color-*` theme
+ // tokens the `bg-primary`/`ring-*` utilities actually consume — chained
+ // `var()` custom properties resolve using the cascade where the
+ // *referencing* property is declared (`:root`), not the element that
+ // ends up using it, so overriding only `--primary` never reaches `.bg-primary`.
+ const brandStyle = provider.brand_color
+ ? ({
+ '--primary': provider.brand_color,
+ '--ring': provider.brand_color,
+ '--color-primary': provider.brand_color,
+ '--color-ring': provider.brand_color,
+ } as React.CSSProperties)
+ : undefined;
+
  // Address states
  const [addressQuery, setAddressQuery] = useState('');
  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
@@ -435,7 +449,6 @@ export default function BookingWizard({ provider, availability = [], blockedDate
 
  // INTRO: Branded hero shown before the numbered wizard steps begin
  if (!wizardStarted) {
- const brandStyle = provider.brand_color ? ({ '--primary': provider.brand_color } as React.CSSProperties) : undefined;
  const hasStats = provider.rating || provider.completed_cleanings_count || provider.years_in_business;
  const trustBadges = [
  provider.is_insured && { icon: ShieldCheck, label: 'Insured' },
@@ -535,7 +548,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  }
 
  return (
- <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20">
+ <div className="min-h-dvh bg-background flex flex-col font-sans selection:bg-primary/20" style={brandStyle}>
  <Head title={`${getStepTitle()} | ${provider.name}`} />
 
  {/* Top App Bar - Fixed */}
