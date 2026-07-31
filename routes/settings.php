@@ -20,4 +20,5 @@ Route::middleware('auth')->group(function () {
     Route::patch('settings/business/name', [BusinessController::class, 'updateName'])->name('business.name.update');
     Route::post('settings/business/photo', [BusinessController::class, 'updatePhoto'])->name('business.photo.update');
     Route::patch('settings/business/notifications', [BusinessController::class, 'updateNotifications'])->name('business.notifications.update');
+    Route::patch('settings/business/brand-color', [BusinessController::class, 'updateBrandColor'])->name('business.brand-color.update');
 });

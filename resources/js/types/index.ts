@@ -34,6 +34,7 @@ export interface User {
  email: string;
  slug: string;
  avatar?: string;
+ brand_color: string | null;
  email_verified_at: string | null;
  created_at: string;
  updated_at: string;

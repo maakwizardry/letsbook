@@ -1,6 +1,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, router, useForm } from '@inertiajs/react';
+import { Check } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -23,10 +24,12 @@ export default function Business({
 	name,
 	cover_image_url,
 	notifications_enabled,
+	brand_color,
 }: {
 	name: string;
 	cover_image_url: string | null;
 	notifications_enabled: boolean;
+	brand_color: string | null;
 }) {
 	return (
 		<AppLayout breadcrumbs={breadcrumbs}>
@@ -36,6 +39,7 @@ export default function Business({
 				<div className="space-y-12">
 					<CoverPhotoForm coverImageUrl={cover_image_url} />
 					<BusinessNameForm name={name} />
+					<BrandColorForm brandColor={brand_color} />
 					<NotificationsForm notificationsEnabled={notifications_enabled} />
 				</div>
 			</SettingsLayout>
@@ -94,6 +98,64 @@ function CoverPhotoForm({ coverImageUrl }: { coverImageUrl: string | null }) {
 					</Transition>
 				</div>
 			</form>
+		</div>
+	);
+}
+
+const BRAND_COLOR_PRESETS = [
+	{ value: '#0284c7', label: 'Blue' },
+	{ value: '#059669', label: 'Green' },
+	{ value: '#7c3aed', label: 'Purple' },
+	{ value: '#e11d48', label: 'Rose' },
+	{ value: '#d97706', label: 'Amber' },
+];
+
+function BrandColorForm({ brandColor }: { brandColor: string | null }) {
+	const [selected, setSelected] = useState(brandColor ?? BRAND_COLOR_PRESETS[0].value);
+	const [saved, setSaved] = useState(false);
+
+	const choose = (value: string) => {
+		setSelected(value);
+		setSaved(false);
+
+		router.patch(
+			route('business.brand-color.update'),
+			{ brand_color: value },
+			{ preserveScroll: true, onSuccess: () => setSaved(true) },
+		);
+	};
+
+	return (
+		<div className="space-y-6">
+			<HeadingSmall title="Brand color" description="Colors your dashboard and booking page" />
+
+			<div className="flex items-center gap-4">
+				<div className="flex items-center gap-3">
+					{BRAND_COLOR_PRESETS.map((preset) => (
+						<button
+							key={preset.value}
+							type="button"
+							title={preset.label}
+							onClick={() => choose(preset.value)}
+							className="flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-background transition-shadow"
+							style={{ backgroundColor: preset.value, '--tw-ring-color': selected === preset.value ? preset.value : 'transparent' } as React.CSSProperties}
+						>
+							{selected === preset.value && <Check className="h-4 w-4 text-white" />}
+						</button>
+					))}
+				</div>
+
+				<Transition
+					show={saved}
+					enter="transition ease-in-out"
+					enterFrom="opacity-0"
+					leave="transition ease-in-out"
+					leaveTo="opacity-0"
+					afterEnter={() => setTimeout(() => setSaved(false), 1500)}
+				>
+					<p className="text-sm text-neutral-600">Saved</p>
+				</Transition>
+			</div>
 		</div>
 	);
 }
