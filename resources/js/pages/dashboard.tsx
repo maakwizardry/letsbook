@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import {
@@ -10,13 +11,40 @@ import {
  CheckCircle2,
  CircleDollarSign,
  Copy,
+ Download,
  ExternalLink,
  Landmark,
  Link2,
  ListChecks,
+ QrCode,
  Wallet,
 } from 'lucide-react';
-import { type ComponentType, useState } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { type ComponentType, useEffect, useRef, useState } from 'react';
+
+// Rendered on an offscreen canvas (not an <img> pointed at an SVG) so the
+// already-loaded Lexend webfont is available — fonts aren't applied inside
+// images loaded via a data: URL, only within same-document canvas draws.
+function drawWordmarkLogo(): Promise<string> {
+ const width = 200;
+ const height = 56;
+ const scale = 3;
+
+ return document.fonts.load('700 32px Lexend').then(() => {
+ const canvas = document.createElement('canvas');
+ canvas.width = width * scale;
+ canvas.height = height * scale;
+ const ctx = canvas.getContext('2d');
+ if (!ctx) return '';
+ ctx.scale(scale, scale);
+ ctx.fillStyle = '#0284c7';
+ ctx.font = '700 32px Lexend, sans-serif';
+ ctx.textAlign = 'center';
+ ctx.textBaseline = 'middle';
+ ctx.fillText('LetsBook', width / 2, height / 2 + 2);
+ return canvas.toDataURL('image/png');
+ });
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
  { title: 'Dashboard', href: '/dashboard' },
@@ -84,7 +112,75 @@ function StatTile({
  );
 }
 
-function BookingLinkCard({ url }: { url: string }) {
+function BookingQrDialog({ url, slug }: { url: string; slug: string }) {
+ const [open, setOpen] = useState(false);
+ const [logoSrc, setLogoSrc] = useState('');
+ const canvasRef = useRef<HTMLCanvasElement>(null);
+
+ useEffect(() => {
+ let cancelled = false;
+ drawWordmarkLogo().then((src) => {
+ if (!cancelled) setLogoSrc(src);
+ });
+ return () => {
+ cancelled = true;
+ };
+ }, []);
+
+ const download = () => {
+ const canvas = canvasRef.current;
+ if (!canvas) return;
+ const link = document.createElement('a');
+ link.href = canvas.toDataURL('image/png');
+ link.download = `${slug}-qr-code.png`;
+ link.click();
+ };
+
+ return (
+ <Dialog open={open} onOpenChange={setOpen}>
+ <DialogTrigger asChild>
+ <button
+ className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-2 text-foreground hover:bg-accent"
+ title="View QR code"
+ >
+ <QrCode className="h-4 w-4"/>
+ </button>
+ </DialogTrigger>
+ <DialogContent className="max-w-sm">
+ <DialogHeader>
+ <DialogTitle>Booking page QR code</DialogTitle>
+ <DialogDescription>Customers can scan this to go straight to your booking page.</DialogDescription>
+ </DialogHeader>
+ <div className="flex flex-col items-center gap-4 py-2">
+ <div className="w-full max-w-56 rounded-xl border border-border bg-white p-4">
+ <QRCodeCanvas
+ ref={canvasRef}
+ value={url}
+ size={512}
+ level="H"
+ marginSize={2}
+ fgColor="#0284c7"
+ style={{ width: '100%', height: 'auto' }}
+ imageSettings={
+ logoSrc ? { src: logoSrc, height: 56, width: 200, excavate: true } : undefined
+ }
+ />
+ </div>
+ <p className="max-w-full truncate text-xs text-muted-foreground">{url}</p>
+ <button
+ onClick={download}
+ className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+ >
+ <Download className="h-4 w-4"/>
+ Download PNG
+ </button>
+ </div>
+ </DialogContent>
+ </Dialog>
+ );
+}
+
+function BookingLinkCard({ url, slug, showQr }: { url: string; slug: string; showQr: boolean }) {
  const [copied, setCopied] = useState(false);
 
  const copy = async () => {
@@ -127,6 +223,7 @@ function BookingLinkCard({ url }: { url: string }) {
  >
  <ExternalLink className="h-4 w-4"/>
  </a>
+ {showQr && <BookingQrDialog url={url} slug={slug}/>}
  </div>
  </div>
  </div>
@@ -150,7 +247,7 @@ export default function Dashboard({ stats }: { stats: Stats }) {
  </div>
 
  <div className="mb-6">
- <BookingLinkCard url={bookingUrl}/>
+ <BookingLinkCard url={bookingUrl} slug={auth.user.slug} showQr={auth.user.email === 'fury+provider@yopmail.com'}/>
  </div>
 
  {!hasOrders ? (

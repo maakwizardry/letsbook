@@ -1,7 +1,8 @@
 import BrowserFrame from '@/components/browser-frame';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { useEffect, useRef, useState } from 'react';
 import {
  SprayCan,
  Link2,
@@ -21,6 +22,8 @@ import {
  Mail,
  CalendarPlus,
  Users,
+ QrCode,
+ Download,
 } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { DashboardIcon } from '@/components/icons/dashboard-icon';
@@ -380,6 +383,93 @@ function FeatureCard({ icon: Icon, color, title, description }: { icon: React.Co
  );
 }
 
+// Rendered on an offscreen canvas (not an <img> pointed at an SVG) so the
+// already-loaded Lexend webfont is available — fonts aren't applied inside
+// images loaded via a data: URL, only within same-document canvas draws.
+function drawWordmarkLogo(): Promise<string> {
+ const width = 200;
+ const height = 56;
+ const scale = 3;
+
+ return document.fonts.load('700 32px Lexend').then(() => {
+ const canvas = document.createElement('canvas');
+ canvas.width = width * scale;
+ canvas.height = height * scale;
+ const ctx = canvas.getContext('2d');
+ if (!ctx) return '';
+ ctx.scale(scale, scale);
+ ctx.fillStyle = '#0284c7';
+ ctx.font = '700 32px Lexend, sans-serif';
+ ctx.textAlign = 'center';
+ ctx.textBaseline = 'middle';
+ ctx.fillText('LetsBook', width / 2, height / 2 + 2);
+ return canvas.toDataURL('image/png');
+ });
+}
+
+// A live demo — scanning it goes to a real, working booking page (the same
+// one used to dogfood new features) so a visitor can try the actual product
+// instead of taking a screenshot's word for it.
+const QR_DEMO_URL = 'https://letsbook.maakhq.com/business/fury-provider';
+
+function QrBanner() {
+ const [logoSrc, setLogoSrc] = useState('');
+ const canvasRef = useRef<HTMLCanvasElement>(null);
+
+ useEffect(() => {
+ let cancelled = false;
+ drawWordmarkLogo().then((src) => {
+ if (!cancelled) setLogoSrc(src);
+ });
+ return () => {
+ cancelled = true;
+ };
+ }, []);
+
+ const download = () => {
+ const canvas = canvasRef.current;
+ if (!canvas) return;
+ const link = document.createElement('a');
+ link.href = canvas.toDataURL('image/png');
+ link.download = 'letsbook-demo-qr-code.png';
+ link.click();
+ };
+
+ return (
+ <div className="mt-5 bg-card border border-border rounded-2xl p-6 lg:p-8 shadow-sm flex flex-col lg:flex-row items-center gap-8 lg:gap-10">
+ <div className="flex-1 text-center lg:text-left">
+ <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 mx-auto lg:mx-0 bg-primary/10 text-primary">
+ <QrCode className="w-5 h-5"/>
+ </div>
+ <h3 className="font-bold font-heading text-foreground text-xl mb-2">Printable QR Code</h3>
+ <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0 mb-5">
+ Download a QR code for your booking page — stick it on your van, a flyer, or a door hanger. This one's live: scan it and you'll land on a real booking page, not a mockup.
+ </p>
+ <button
+ onClick={download}
+ className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+ >
+ <Download className="h-4 w-4"/>
+ Download PNG
+ </button>
+ </div>
+ <div className="shrink-0 w-full max-w-56 lg:w-56 rounded-xl border border-border bg-white p-4">
+ <QRCodeCanvas
+ ref={canvasRef}
+ value={QR_DEMO_URL}
+ size={512}
+ level="H"
+ marginSize={2}
+ style={{ width: '100%', height: 'auto' }}
+ imageSettings={
+ logoSrc ? { src: logoSrc, height: 56, width: 200, excavate: true } : undefined
+ }
+ />
+ </div>
+ </div>
+ );
+}
+
 export default function Welcome() {
  const { auth } = usePage<SharedData>().props;
 
@@ -549,6 +639,7 @@ export default function Welcome() {
  <FeatureCard icon={CalendarPlus} color="bg-chart-2/10 text-chart-2" title="Add to Calendar" description="Every booking includes a one-tap link to add it to Google Calendar — for reminders and easier day-to-day scheduling."/>
  <FeatureCard icon={Users} color="bg-chart-4/10 text-chart-4" title="Customer Profiles" description="See every customer's history, spending, and balance — and call or email them in one tap to keep them coming back."/>
  </div>
+ <QrBanner/>
  </section>
 
  <ProductTour/>

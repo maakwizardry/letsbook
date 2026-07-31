@@ -46,6 +46,15 @@ const faqCategories: { category: string; icon: LucideIcon; items: Faq[] }[] = [
  ],
  screenshot: { image: '/images/dashboard.jpeg', width: 1400, height: 686, alt: 'The "Your booking page" card on the dashboard', url: 'letsbook.app/dashboard' },
  },
+ {
+ question: 'Can I get a QR code for my booking page?',
+ steps: [
+ 'On your Dashboard, click the QR code icon next to Copy and Open in the "Your booking page" card.',
+ 'Click "Download PNG" to save it — it\'s a high-resolution image with the LetsBook logo in the middle, so it prints cleanly.',
+ 'Print it and put it wherever customers already see you: your van or car window, a flyer, a door hanger, a business card, or a receipt.',
+ ],
+ note: 'Anyone who scans it goes straight to your booking page — no typing a URL, no searching for you online.',
+ },
  ],
  },
  {
