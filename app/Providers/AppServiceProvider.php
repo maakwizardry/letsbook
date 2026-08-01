@@ -28,5 +28,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewLogViewer', function (?Provider $user) {
             return $user?->email === 'fury+provider@yopmail.com';
         });
+
+        // Same restriction for /pulse (laravel/pulse) — Pulse's own
+        // routes/web.php authorizes every request through this gate.
+        Gate::define('viewPulse', function (?Provider $user) {
+            return $user?->email === 'fury+provider@yopmail.com';
+        });
     }
 }
