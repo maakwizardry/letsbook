@@ -25,7 +25,7 @@ import { type ComponentType, useEffect, useRef, useState } from 'react';
 // Rendered on an offscreen canvas (not an <img> pointed at an SVG) so the
 // already-loaded Lexend webfont is available — fonts aren't applied inside
 // images loaded via a data: URL, only within same-document canvas draws.
-function drawWordmarkLogo(): Promise<string> {
+function drawWordmarkLogo(color: string): Promise<string> {
  const width = 200;
  const height = 56;
  const scale = 3;
@@ -37,7 +37,7 @@ function drawWordmarkLogo(): Promise<string> {
  const ctx = canvas.getContext('2d');
  if (!ctx) return '';
  ctx.scale(scale, scale);
- ctx.fillStyle = '#0284c7';
+ ctx.fillStyle = color;
  ctx.font = '700 32px Lexend, sans-serif';
  ctx.textAlign = 'center';
  ctx.textBaseline = 'middle';
@@ -113,19 +113,21 @@ function StatTile({
 }
 
 function BookingQrDialog({ url, slug }: { url: string; slug: string }) {
+ const { auth } = usePage<SharedData>().props;
+ const brandColor = auth.user.brand_color || '#0284c7';
  const [open, setOpen] = useState(false);
  const [logoSrc, setLogoSrc] = useState('');
  const canvasRef = useRef<HTMLCanvasElement>(null);
 
  useEffect(() => {
  let cancelled = false;
- drawWordmarkLogo().then((src) => {
+ drawWordmarkLogo(brandColor).then((src) => {
  if (!cancelled) setLogoSrc(src);
  });
  return () => {
  cancelled = true;
  };
- }, []);
+ }, [brandColor]);
 
  const download = () => {
  const canvas = canvasRef.current;
@@ -159,7 +161,7 @@ function BookingQrDialog({ url, slug }: { url: string; slug: string }) {
  size={512}
  level="H"
  marginSize={2}
- fgColor="#0284c7"
+ fgColor={brandColor}
  style={{ width: '100%', height: 'auto' }}
  imageSettings={
  logoSrc ? { src: logoSrc, height: 56, width: 200, excavate: true } : undefined
@@ -180,7 +182,7 @@ function BookingQrDialog({ url, slug }: { url: string; slug: string }) {
  );
 }
 
-function BookingLinkCard({ url, slug, showQr }: { url: string; slug: string; showQr: boolean }) {
+function BookingLinkCard({ url, slug }: { url: string; slug: string }) {
  const [copied, setCopied] = useState(false);
 
  const copy = async () => {
@@ -223,7 +225,7 @@ function BookingLinkCard({ url, slug, showQr }: { url: string; slug: string; sho
  >
  <ExternalLink className="h-4 w-4"/>
  </a>
- {showQr && <BookingQrDialog url={url} slug={slug}/>}
+ <BookingQrDialog url={url} slug={slug}/>
  </div>
  </div>
  </div>
@@ -247,7 +249,7 @@ export default function Dashboard({ stats }: { stats: Stats }) {
  </div>
 
  <div className="mb-6">
- <BookingLinkCard url={bookingUrl} slug={auth.user.slug} showQr={auth.user.email === 'fury+provider@yopmail.com'}/>
+ <BookingLinkCard url={bookingUrl} slug={auth.user.slug}/>
  </div>
 
  {!hasOrders ? (
