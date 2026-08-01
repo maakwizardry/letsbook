@@ -154,7 +154,7 @@ class BookingController extends Controller
             'customer_email' => $validated['customer_email'] ?? null,
         ], $items);
 
-        $booking->load('items.serviceItem', 'customer', 'serviceCategory', 'provider');
+        $booking->load('items.serviceItem', 'customer', 'serviceCategory', 'provider', 'staff');
 
         // Notifying provider and customer
         if ($booking->provider && $booking->provider->email) {

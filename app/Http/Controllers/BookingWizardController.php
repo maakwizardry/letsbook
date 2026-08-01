@@ -17,9 +17,7 @@ class BookingWizardController extends Controller
         $completedCleanings = $provider->bookings()->count();
 
         // staff_id is only honored for a provider deliberately flagged into
-        // staff scheduling — there's no staff-picker UI yet, so no real
-        // request sends this today and every provider keeps seeing exactly
-        // the provider-wide schedule they always have.
+        // staff scheduling, and only when it names one of their own staff.
         $staffId = null;
         if ($provider->uses_staff_scheduling && $request->filled('staff_id')) {
             $staffId = Staff::where('id', $request->staff_id)
@@ -46,11 +44,29 @@ class BookingWizardController extends Controller
                 'end_time' => substr($availability->end_time, 0, 5),
             ]);
 
-        $blockedDates = $provider->blockedDates()->where('date', '>=', today())->orderBy('date')->pluck('date')->map->toDateString();
+        // A specific staff member's own holidays block their calendar in
+        // addition to the whole-business blocked dates; "any available"
+        // (no staff_id) only sees whole-business closures, since that path
+        // doesn't know which staff member would actually take the job.
+        $blockedDates = $provider->blockedDates()
+            ->where('date', '>=', today())
+            ->when($staffId, fn ($query) => $query->where(fn ($q) => $q->whereNull('staff_id')->orWhere('staff_id', $staffId)))
+            ->when(! $staffId, fn ($query) => $query->whereNull('staff_id'))
+            ->orderBy('date')
+            ->pluck('date')
+            ->map->toDateString();
+
+        // Active staff, only for a provider flagged into staff scheduling —
+        // this stays an empty array (no picker renders) for every provider
+        // without the flag, which today is all of them.
+        $staff = $provider->uses_staff_scheduling
+            ? $provider->staff()->where('is_active', true)->orderBy('name')->get(['id', 'name'])
+            : [];
 
         return Inertia::render('Booking/Index', [
             'availability' => $availability,
             'blockedDates' => $blockedDates,
+            'staff' => $staff,
             'provider' => [
                 'id' => $provider->id,
                 'name' => $provider->name,

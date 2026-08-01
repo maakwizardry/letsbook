@@ -1,17 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import { 
+import { Head, Link, router } from '@inertiajs/react';
+import {
  Check,
  ChevronRight,
  ChevronLeft,
  ArrowLeft,
- Plus, 
+ Plus,
  Minus,
  ShoppingCart,
  MapPin,
  CalendarDays,
  Clock,
  User,
+ Users,
  Mail,
  Phone,
  Info,
@@ -58,7 +59,7 @@ function categoryRank(category: string) {
  return CATEGORY_ORDER.length;
 }
 
-export default function BookingWizard({ provider, availability = [], blockedDates = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[]; blockedDates?: string[] }) {
+export default function BookingWizard({ provider, availability = [], blockedDates = [], staff = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[]; blockedDates?: string[]; staff?: { id: number; name: string }[] }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
  const [step, setStep] = useState(1);
  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
@@ -76,6 +77,10 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // Selection states
  const [selectedServiceCategoryId, setSelectedServiceCategoryId] = useState<number | null>(null);
  const [cart, setCart] = useState<Record<number, number>>({}); // { serviceId: quantity }
+ // null = "Any available" — only meaningful when `staff` is non-empty,
+ // which only happens for a provider deliberately flagged into staff
+ // scheduling (see Provider::uses_staff_scheduling).
+ const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
  const [selectedDate, setSelectedDate] = useState<string>('');
  const [selectedTime, setSelectedTime] = useState<string>('');
  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', notes: '' });
@@ -176,14 +181,33 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  }
  }, [selectedServiceCategoryId]);
 
- // Fetch booked slots when date changes
+ // Fetch booked slots when date (or the selected staff member) changes
  useEffect(() => {
  if (selectedDate) {
- fetch(`/api/booked-slots?provider_id=${provider.id}&start_date=${selectedDate}&end_date=${selectedDate}`)
+ const staffParam = selectedStaffId ? `&staff_id=${selectedStaffId}` : '';
+ fetch(`/api/booked-slots?provider_id=${provider.id}&start_date=${selectedDate}&end_date=${selectedDate}${staffParam}`)
  .then(res => res.json())
  .then(data => setBookedSlots(data.booked_slots || []));
  }
- }, [selectedDate, provider.id]);
+ }, [selectedDate, selectedStaffId, provider.id]);
+
+ // Switching staff can change which days/hours are open (a staff member's
+ // own schedule differs from the provider default), so re-fetch just the
+ // availability/blockedDates props for the newly selected staff — and drop
+ // any date/time picked under the previous staff member's calendar, since
+ // it may no longer be valid.
+ const handleSelectStaff = (id: number | null) => {
+ if (id === selectedStaffId) return;
+ setSelectedStaffId(id);
+ setSelectedDate('');
+ setSelectedTime('');
+ setIsCalendarOpen(true);
+ router.reload({
+ data: { staff_id: id ?? undefined },
+ only: ['availability', 'blockedDates'],
+ replace: true,
+ });
+ };
 
  // Handlers
  const handleAddService = (id: number) => {
@@ -274,6 +298,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  body: JSON.stringify({
  service_category_id: selectedServiceCategoryId,
  service_item_ids,
+ staff_id: selectedStaffId ?? undefined,
  scheduled_at,
  customer_name: customer.name,
  customer_email: customer.email,
@@ -709,6 +734,46 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  Edit
  </button>
  </div>
+
+ {/* Staff Picker — only rendered for a provider with staff scheduling enabled */}
+ {staff.length > 0 && (
+ <div className="px-4 pt-6">
+ <h2 className="text-lg font-bold font-heading text-foreground mb-3">Who would you like?</h2>
+ <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1" role="radiogroup" aria-label="Staff member">
+ <button
+ type="button"
+ role="radio"
+ aria-checked={selectedStaffId === null}
+ onClick={() => handleSelectStaff(null)}
+ className={`flex shrink-0 flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 transition-[transform,box-shadow,border-color,background-color] duration-150 active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+ selectedStaffId === null ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border bg-card text-foreground hover:border-primary/30'
+ }`}
+ >
+ <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+ <Users className="w-4 h-4"/>
+ </div>
+ <span className="text-xs font-semibold whitespace-nowrap">Any available</span>
+ </button>
+ {staff.map(member => (
+ <button
+ key={member.id}
+ type="button"
+ role="radio"
+ aria-checked={selectedStaffId === member.id}
+ onClick={() => handleSelectStaff(member.id)}
+ className={`flex shrink-0 flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 transition-[transform,box-shadow,border-color,background-color] duration-150 active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+ selectedStaffId === member.id ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border bg-card text-foreground hover:border-primary/30'
+ }`}
+ >
+ <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-foreground">
+ {member.name.charAt(0).toUpperCase()}
+ </div>
+ <span className="text-xs font-semibold whitespace-nowrap">{member.name}</span>
+ </button>
+ ))}
+ </div>
+ </div>
+ )}
 
  {/* Calendar Date Picker */}
  <div className="bg-card pt-6 pb-4 border-b border-border sticky top-14 z-40">
@@ -1265,6 +1330,12 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  <div className="flex items-start gap-3">
  <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
  <span className="text-sm text-foreground/80">{scheduleLabel}</span>
+ </div>
+ )}
+ {bookingResponse?.staff?.name && (
+ <div className="flex items-start gap-3">
+ <Users className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
+ <span className="text-sm text-foreground/80">With {bookingResponse.staff.name}</span>
  </div>
  )}
  <div className="flex items-start gap-3">
