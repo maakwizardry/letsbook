@@ -3,19 +3,40 @@
 namespace App\Http\Controllers;
 
 use App\Models\Provider;
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class BookingWizardController extends Controller
 {
-    public function show($slug)
+    public function show(Request $request, $slug)
     {
         $provider = Provider::where('slug', $slug)->firstOrFail();
 
         $completedCleanings = $provider->bookings()->count();
 
-        $availability = $provider->availabilities()
+        // staff_id is only honored for a provider deliberately flagged into
+        // staff scheduling — there's no staff-picker UI yet, so no real
+        // request sends this today and every provider keeps seeing exactly
+        // the provider-wide schedule they always have.
+        $staffId = null;
+        if ($provider->uses_staff_scheduling && $request->filled('staff_id')) {
+            $staffId = Staff::where('id', $request->staff_id)
+                ->where('provider_id', $provider->id)
+                ->value('id');
+        }
+
+        if ($staffId && $provider->availabilities()->where('staff_id', $staffId)->exists()) {
+            // This staff member has their own schedule — use it exclusively.
+            $availabilityQuery = $provider->availabilities()->where('staff_id', $staffId);
+        } else {
+            // No staff_id, or this staff member hasn't been given their own
+            // hours yet — same provider-wide (staff_id null) rows as always.
+            $availabilityQuery = $provider->availabilities()->whereNull('staff_id');
+        }
+
+        $availability = $availabilityQuery
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->get()

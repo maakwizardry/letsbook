@@ -56,4 +56,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/staff', [ProviderStaffController::class, 'store']);
     Route::patch('/staff/{id}', [ProviderStaffController::class, 'update']);
     Route::delete('/staff/{id}', [ProviderStaffController::class, 'destroy']);
+    Route::get('/staff/{id}/availability', [ProviderStaffController::class, 'availability']);
+    Route::put('/staff/{id}/availability', [ProviderStaffController::class, 'updateAvailability']);
 });
