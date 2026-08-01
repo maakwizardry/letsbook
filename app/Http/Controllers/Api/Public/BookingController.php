@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Public;
 use App\Http\Controllers\Controller;
 use App\Models\BlockedDate;
 use App\Models\Customer;
+use App\Models\Provider;
 use App\Models\ServiceCategory;
 use App\Models\ServiceItem;
 use App\Models\Staff;
@@ -19,6 +20,19 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        $request->validate(['service_category_id' => 'required|exists:service_categories,id']);
+
+        $serviceCategory = ServiceCategory::findOrFail($request->service_category_id);
+        $providerId = $serviceCategory->provider_id;
+        $provider = $serviceCategory->provider;
+
+        // A cleaning job happens at the customer's home, so the address is
+        // required; an appointment-type business (barber, dentist, etc.) is
+        // visited at the business itself, so it isn't. Every provider today
+        // defaults to 'cleaning', so this is required for 100% of current
+        // traffic — identical to before this check existed.
+        $requiresAddress = $provider->business_type !== Provider::BUSINESS_TYPE_APPOINTMENT;
+
         $validated = $request->validate([
             'service_category_id' => 'required|exists:service_categories,id',
             'service_item_ids' => 'required|array',
@@ -26,13 +40,13 @@ class BookingController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:255',
             'customer_email' => 'nullable|email|max:255',
-            'customer_address' => 'required|string',
+            'customer_address' => $requiresAddress ? 'required|string' : 'nullable|string',
             'unit_number' => 'nullable|string|max:255',
             'buzz_code' => 'nullable|string|max:255',
             'building_instructions' => 'nullable|string',
             'postal_code' => 'nullable|string|max:255',
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
+            'latitude' => $requiresAddress ? 'required|numeric|between:-90,90' : 'nullable|numeric|between:-90,90',
+            'longitude' => $requiresAddress ? 'required|numeric|between:-180,180' : 'nullable|numeric|between:-180,180',
             'notes' => 'nullable|string',
             'scheduled_at' => 'required|date',
             'payment_method' => 'required|in:cash,etransfer',
@@ -46,10 +60,6 @@ class BookingController extends Controller
                 'errors' => ['customer_email' => ['An email address is required to receive a booking reminder.']]
             ], 422);
         }
-
-        $serviceCategory = ServiceCategory::findOrFail($validated['service_category_id']);
-        $providerId = $serviceCategory->provider_id;
-        $provider = $serviceCategory->provider;
 
         // staff_id only ever takes effect for a provider that's been
         // deliberately flagged into staff scheduling — sending it for any
@@ -111,13 +121,13 @@ class BookingController extends Controller
         }
 
         $addressAttributes = [
-            'address' => $validated['customer_address'],
+            'address' => $validated['customer_address'] ?? null,
             'unit_number' => $validated['unit_number'] ?? null,
             'buzz_code' => $validated['buzz_code'] ?? null,
             'building_instructions' => $validated['building_instructions'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
         ];
 
         if (!$customer) {
