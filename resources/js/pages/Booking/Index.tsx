@@ -100,6 +100,12 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // Wizard intro state
  const [wizardStarted, setWizardStarted] = useState(false);
 
+ // Cleaning happens at the customer's home, so we collect an address;
+ // an appointment-type business (barber, dentist, etc.) is visited at
+ // the business itself, so that whole step doesn't apply. Every real
+ // provider today defaults to 'cleaning', so this is unchanged for them.
+ const isAppointmentType = provider.business_type === 'appointment';
+
  // Both layers: the semantic var itself, and Tailwind's `--color-*` theme
  // tokens the `bg-primary`/`ring-*` utilities actually consume — chained
  // `var()` custom properties resolve using the cascade where the
@@ -951,6 +957,8 @@ export default function BookingWizard({ provider, availability = [], blockedDate
 
  {/* User Details Form */}
  <div className="p-4 pt-6 space-y-5">
+ {!isAppointmentType && (
+ <>
  <div>
  <h2 className="text-xl font-bold font-heading text-foreground mb-1">Where should we come?</h2>
  <p className="text-muted-foreground text-sm">Enter the address where you'd like the cleaning service.</p>
@@ -1087,8 +1095,9 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  </div>
  )}
  </div>
-
  <div className="pt-2 border-t border-dashed border-border"/>
+ </>
+ )}
 
  <h2 className="text-xl font-bold font-heading text-foreground">Your Details</h2>
 
@@ -1338,12 +1347,14 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  <span className="text-sm text-foreground/80">With {bookingResponse.staff.name}</span>
  </div>
  )}
+ {!isAppointmentType && selectedAddress && (
  <div className="flex items-start gap-3">
  <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
  <span className="text-sm text-foreground/80">
- {selectedAddress?.displayName}{unitNumber && `, Unit ${unitNumber}`}
+ {selectedAddress.displayName}{unitNumber && `, Unit ${unitNumber}`}
  </span>
  </div>
+ )}
  <div className="flex items-start gap-3">
  {paymentMethod === 'cash' ? (
  <Banknote className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"/>
@@ -1456,7 +1467,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  <div className="text-xl font-black text-foreground">${totalQuote}</div>
  </div>
  <button
- disabled={!selectedAddress || !customer.name || !customer.phone || !paymentMethod || !!fieldErrors.phone || !!fieldErrors.email || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
+ disabled={(!isAppointmentType && !selectedAddress) || !customer.name || !customer.phone || !paymentMethod || !!fieldErrors.phone || !!fieldErrors.email || (reminderMinutesBefore !== null && !customer.email) || isSubmitting}
  onClick={submitBooking}
  className="px-8 py-3.5 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-[transform,box-shadow] duration-150 active:scale-[0.97] shadow-lg shadow-primary/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
  >
