@@ -14,6 +14,7 @@ class BookingSeries extends Model
     protected $fillable = [
         'provider_id',
         'customer_id',
+        'staff_id',
         'service_category_id',
         'frequency',
         'days_of_week',
@@ -51,6 +52,11 @@ class BookingSeries extends Model
     public function serviceCategory()
     {
         return $this->belongsTo(ServiceCategory::class);
+    }
+
+    public function staff()
+    {
+        return $this->belongsTo(Staff::class);
     }
 
     public function serviceItems()

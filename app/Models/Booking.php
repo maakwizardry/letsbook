@@ -28,6 +28,7 @@ class Booking extends Model
         'provider_id',
         'booking_series_id',
         'customer_id',
+        'staff_id',
         'service_category_id',
         'reference_id',
         'total_quote',
@@ -65,6 +66,11 @@ class Booking extends Model
     public function serviceCategory()
     {
         return $this->belongsTo(ServiceCategory::class);
+    }
+
+    public function staff()
+    {
+        return $this->belongsTo(Staff::class);
     }
 
     public function bookingSeries()

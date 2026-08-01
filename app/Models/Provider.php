@@ -77,6 +77,11 @@ class Provider extends Authenticatable
         return $this->hasMany(BlockedDate::class);
     }
 
+    public function staff()
+    {
+        return $this->hasMany(Staff::class);
+    }
+
     /**
      * Give a freshly registered provider a starter catalog so their booking
      * page isn't empty before they've had a chance to configure it.
