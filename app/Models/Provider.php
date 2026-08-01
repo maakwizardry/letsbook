@@ -11,6 +11,23 @@ class Provider extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * Deliberately not an exhaustive per-niche list (no 'barber',
+     * 'dentist', etc.) — a barber and a dentist need the same behavior
+     * (appointment at the business, staff selection), just different
+     * copy. New niches should map onto one of these two, not add a
+     * third value, unless a future niche genuinely needs different
+     * booking *behavior*, not just different words.
+     */
+    public const BUSINESS_TYPE_CLEANING = 'cleaning';
+
+    public const BUSINESS_TYPE_APPOINTMENT = 'appointment';
+
+    public const BUSINESS_TYPES = [
+        self::BUSINESS_TYPE_CLEANING,
+        self::BUSINESS_TYPE_APPOINTMENT,
+    ];
+
     protected $fillable = [
         'name',
         'contact_info',
