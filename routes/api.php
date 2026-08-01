@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Public\AvailabilityController as PublicAvailability
 use App\Http\Controllers\Api\Provider\BookingController as ProviderBookingController;
 use App\Http\Controllers\Api\Provider\ServiceCategoryController as ProviderServiceCategoryController;
 use App\Http\Controllers\Api\Provider\ServiceItemController as ProviderServiceItemController;
+use App\Http\Controllers\Api\Provider\StaffController as ProviderStaffController;
 use App\Http\Controllers\AIGirlController;
 use App\Http\Controllers\Api\ImageGenerationController;
 use App\Http\Controllers\Api\StoryScenePublishController;
@@ -50,4 +51,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/service-items', [ProviderServiceItemController::class, 'store']);
     Route::patch('/service-items/{id}', [ProviderServiceItemController::class, 'update']);
     Route::delete('/service-items/{id}', [ProviderServiceItemController::class, 'destroy']);
+
+    Route::get('/staff', [ProviderStaffController::class, 'index']);
+    Route::post('/staff', [ProviderStaffController::class, 'store']);
+    Route::patch('/staff/{id}', [ProviderStaffController::class, 'update']);
+    Route::delete('/staff/{id}', [ProviderStaffController::class, 'destroy']);
 });

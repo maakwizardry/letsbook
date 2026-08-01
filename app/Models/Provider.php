@@ -44,6 +44,7 @@ class Provider extends Authenticatable
             'password' => 'hashed',
             'invitation_token' => 'hashed',
             'notifications_enabled' => 'boolean',
+            'uses_staff_scheduling' => 'boolean',
         ];
     }
 

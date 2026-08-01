@@ -7,6 +7,7 @@ use App\Models\BlockedDate;
 use App\Models\Customer;
 use App\Models\ServiceCategory;
 use App\Models\ServiceItem;
+use App\Models\Staff;
 use App\Notifications\BookingConfirmationNotification;
 use App\Notifications\NewBookingNotification;
 use App\Services\BookingCreator;
@@ -36,6 +37,7 @@ class BookingController extends Controller
             'scheduled_at' => 'required|date',
             'payment_method' => 'required|in:cash,etransfer',
             'reminder_minutes_before' => 'nullable|integer|in:30,60,180,1440',
+            'staff_id' => 'nullable|integer',
         ]);
 
         if (!empty($validated['reminder_minutes_before']) && empty($validated['customer_email'])) {
@@ -47,6 +49,23 @@ class BookingController extends Controller
 
         $serviceCategory = ServiceCategory::findOrFail($validated['service_category_id']);
         $providerId = $serviceCategory->provider_id;
+        $provider = $serviceCategory->provider;
+
+        // staff_id only ever takes effect for a provider that's been
+        // deliberately flagged into staff scheduling — sending it for any
+        // other provider is silently ignored, not an error, since a
+        // customer/client shouldn't be able to opt a provider into this by
+        // simply including the field.
+        $staffId = null;
+        if ($provider->uses_staff_scheduling && !empty($validated['staff_id'])) {
+            if (! Staff::where('id', $validated['staff_id'])->where('provider_id', $providerId)->exists()) {
+                return response()->json([
+                    'message' => 'Invalid staff selection.',
+                    'errors' => ['staff_id' => ['Invalid staff selection.']]
+                ], 422);
+            }
+            $staffId = $validated['staff_id'];
+        }
 
         $items = ServiceItem::whereIn('id', $validated['service_item_ids'])->get();
 
@@ -75,7 +94,7 @@ class BookingController extends Controller
             ], 422);
         }
 
-        if ($this->bookingCreator->hasOverlap($providerId, $scheduledAt, $durationHours)) {
+        if ($this->bookingCreator->hasOverlap($providerId, $scheduledAt, $durationHours, staffId: $staffId)) {
             return response()->json([
                 'message' => 'This time slot is already booked.',
                 'errors' => ['scheduled_at' => ['This time slot is already booked.']]
@@ -115,6 +134,7 @@ class BookingController extends Controller
         $booking = $this->bookingCreator->create([
             'provider_id' => $providerId,
             'customer_id' => $customer->id,
+            'staff_id' => $staffId,
             'service_category_id' => $validated['service_category_id'],
             'scheduled_at' => $scheduledAt,
             'duration_hours' => $durationHours,

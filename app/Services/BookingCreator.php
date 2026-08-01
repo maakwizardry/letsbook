@@ -28,7 +28,7 @@ class BookingCreator
      * one, so the public booking flow needs no changes to keep producing
      * 1-hour bookings.
      *
-     * @param  array{provider_id: int, booking_series_id?: int|null, customer_id: int, service_category_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours?: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
+     * @param  array{provider_id: int, booking_series_id?: int|null, customer_id: int, staff_id?: int|null, service_category_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours?: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
      */
     public function create(array $attributes, Collection $serviceItems): Booking
     {
@@ -46,6 +46,7 @@ class BookingCreator
             'provider_id' => $attributes['provider_id'],
             'booking_series_id' => $attributes['booking_series_id'] ?? null,
             'customer_id' => $attributes['customer_id'],
+            'staff_id' => $attributes['staff_id'] ?? null,
             'service_category_id' => $attributes['service_category_id'],
             'reference_id' => 'BKG-'.strtoupper(Str::random(6)),
             'total_quote' => $serviceItems->sum('price'),
@@ -77,7 +78,7 @@ class BookingCreator
      * since a reschedule can move the reminder from past to future or vice
      * versa.
      *
-     * @param  array{service_category_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
+     * @param  array{service_category_id: int, staff_id?: int|null, scheduled_at: \Illuminate\Support\Carbon, duration_hours: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
      */
     public function update(Booking $booking, array $attributes, Collection $serviceItems): Booking
     {
@@ -93,6 +94,11 @@ class BookingCreator
 
         $booking->update([
             'service_category_id' => $attributes['service_category_id'],
+            // Preserve whatever staff_id the booking already had unless the
+            // caller explicitly passes one — call sites that don't know
+            // about staff assignment yet (today, all of them) shouldn't
+            // silently wipe it on every edit.
+            'staff_id' => array_key_exists('staff_id', $attributes) ? $attributes['staff_id'] : $booking->staff_id,
             'total_quote' => $serviceItems->sum('price'),
             'payment_method' => $attributes['payment_method'],
             'notes' => $attributes['notes'] ?? null,
@@ -125,14 +131,22 @@ class BookingCreator
      * far back an existing booking's own end time could still reach.
      * $excludeBookingId lets an edit check for overlaps against every other
      * booking without perpetually colliding with itself.
+     *
+     * $staffId, when passed, narrows the conflict check to that one staff
+     * member's own bookings instead of every booking the provider has —
+     * two different staff can legitimately be booked at the same time.
+     * Every existing call site omits it (null), which keeps the query
+     * byte-for-byte identical to before this parameter existed: a
+     * provider with no staff concept still gets a single shared calendar.
      */
-    public function hasOverlap(int $providerId, Carbon $start, int $durationHours, ?int $excludeBookingId = null): bool
+    public function hasOverlap(int $providerId, Carbon $start, int $durationHours, ?int $excludeBookingId = null, ?int $staffId = null): bool
     {
         $end = $start->copy()->addHours($durationHours);
 
         return Booking::where('provider_id', $providerId)
             ->where('status', '!=', Booking::STATUS_CANCELLED)
             ->when($excludeBookingId, fn ($query) => $query->where('id', '!=', $excludeBookingId))
+            ->when($staffId, fn ($query) => $query->where('staff_id', $staffId))
             ->where('scheduled_at', '>', $start->copy()->subHours(self::MAX_DURATION_HOURS))
             ->where('scheduled_at', '<', $end)
             ->get(['scheduled_at', 'duration_hours'])
