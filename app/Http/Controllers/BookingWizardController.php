@@ -72,6 +72,7 @@ class BookingWizardController extends Controller
                 'name' => $provider->name,
                 'slug' => $provider->slug,
                 'business_type' => $provider->business_type,
+                'business_niche' => $provider->business_niche,
                 'etransfer_email' => $provider->etransfer_email,
                 'logo_url' => $provider->logo_path ? url(Storage::url($provider->logo_path)).'?v='.Storage::disk('public')->lastModified($provider->logo_path) : null,
                 'cover_image_url' => $provider->cover_image_path ? url(Storage::url($provider->cover_image_path)).'?v='.Storage::disk('public')->lastModified($provider->cover_image_path) : asset('images/default-cover.jpg'),

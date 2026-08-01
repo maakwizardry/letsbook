@@ -59,6 +59,66 @@ function categoryRank(category: string) {
  return CATEGORY_ORDER.length;
 }
 
+interface WizardCopy {
+ stepTitle: string;
+ heading: string;
+ subtext: string;
+ introText: string;
+ calendarPrefix: string;
+ receiptLabel: string;
+}
+
+// The exact wording every real provider sees today — never change these
+// without checking every existing cleaning customer is fine with it.
+const CLEANING_COPY: WizardCopy = {
+ stepTitle: 'Select Home Type',
+ heading: 'Select your home type',
+ subtext: 'Pricing and services are tailored to your property size.',
+ introText: 'Pick your home type, choose your services, and grab a time that works — takes about 2 minutes.',
+ calendarPrefix: 'Cleaning',
+ receiptLabel: 'Home Cleaning Service',
+};
+
+// Used for business_type=appointment when business_niche is unset, or set
+// to a niche that doesn't have its own entry in NICHE_COPY below yet.
+const GENERIC_APPOINTMENT_COPY: WizardCopy = {
+ stepTitle: 'Select a Service',
+ heading: 'Select a service',
+ subtext: "Choose the option that fits what you need.",
+ introText: 'Pick a service, choose any extras, and grab a time that works — takes about 2 minutes.',
+ calendarPrefix: 'Appointment',
+ receiptLabel: 'Appointment',
+};
+
+// Keyed by Provider::business_niche (see app/Models/Provider.php). Add an
+// entry here whenever a niche needs wording beyond the generic appointment
+// copy above — nothing else needs to change for a new niche to work, it
+// just uses the generic copy until it gets an entry.
+const NICHE_COPY: Record<string, WizardCopy> = {
+ barber: {
+ stepTitle: 'Select a Service',
+ heading: 'Select a service',
+ subtext: "Choose the cut or service you'd like.",
+ introText: 'Pick a service, choose any extras, and grab a time that works — takes about 2 minutes.',
+ calendarPrefix: 'Appointment',
+ receiptLabel: 'Barber Appointment',
+ },
+ dentist: {
+ stepTitle: 'Select a Treatment',
+ heading: 'Select a treatment',
+ subtext: 'Choose the treatment or service you need.',
+ introText: 'Pick a treatment, choose any extras, and grab a time that works — takes about 2 minutes.',
+ calendarPrefix: 'Appointment',
+ receiptLabel: 'Dental Appointment',
+ },
+};
+
+function resolveWizardCopy(businessType: string | null | undefined, businessNiche: string | null | undefined): WizardCopy {
+ if (businessType !== 'appointment') return CLEANING_COPY;
+ if (businessNiche && NICHE_COPY[businessNiche]) return NICHE_COPY[businessNiche];
+ return GENERIC_APPOINTMENT_COPY;
+}
+
 export default function BookingWizard({ provider, availability = [], blockedDates = [], staff = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[]; blockedDates?: string[]; staff?: { id: number; name: string }[] }) {
  // 1: Home Type, 2: Services, 3: Schedule, 4: Details, 5: Success
  const [step, setStep] = useState(1);
@@ -105,6 +165,10 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // the business itself, so that whole step doesn't apply. Every real
  // provider today defaults to 'cleaning', so this is unchanged for them.
  const isAppointmentType = provider.business_type === 'appointment';
+ const wizardCopy = useMemo(
+ () => resolveWizardCopy(provider.business_type, provider.business_niche),
+ [provider.business_type, provider.business_niche],
+ );
 
  // Both layers: the semantic var itself, and Tailwind's `--color-*` theme
  // tokens the `bg-primary`/`ring-*` utilities actually consume — chained
@@ -280,12 +344,12 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  const location = selectedAddress ? `${selectedAddress.displayName}${unitNumber ? `, Unit ${unitNumber}` : ''}` : undefined;
 
  return buildGoogleCalendarUrl({
- title: `Cleaning — ${provider.name}`,
+ title: `${wizardCopy.calendarPrefix} — ${provider.name}`,
  start,
  details,
  location,
  });
- }, [selectedDate, selectedTime, cart, serviceItems, selectedAddress, unitNumber, provider.name]);
+ }, [selectedDate, selectedTime, cart, serviceItems, selectedAddress, unitNumber, provider.name, wizardCopy]);
 
  const submitBooking = async () => {
  setIsSubmitting(true);
@@ -469,7 +533,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // Steps configs
  const getStepTitle = () => {
  switch (step) {
- case 1: return 'Select Home Type';
+ case 1: return wizardCopy.stepTitle;
  case 2: return 'Select Services';
  case 3: return 'Choose Date & Time';
  case 4: return 'Review & Checkout';
@@ -545,7 +609,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
 
  {/* Welcome Message */}
  <p className="text-white/85 text-sm leading-relaxed mb-4 max-w-sm">
- Pick your home type, choose your services, and grab a time that works — takes about 2 minutes.
+ {wizardCopy.introText}
  </p>
 
  {/* Trust Badges */}
@@ -633,8 +697,8 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  {step === 1 && (
  <div className="p-4 animate-in fade-in slide-in-from-right-4 duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]">
  <div className="mb-6">
- <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Select your home type</h2>
- <p className="text-muted-foreground text-sm">Pricing and services are tailored to your property size.</p>
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">{wizardCopy.heading}</h2>
+ <p className="text-muted-foreground text-sm">{wizardCopy.subtext}</p>
  </div>
  <div className="space-y-4">
  {serviceCategories.map(type => (
@@ -1307,7 +1371,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  )}
  <div className="flex-1 min-w-0">
  <p className="font-bold text-foreground truncate">{provider.name}</p>
- <p className="text-xs text-muted-foreground">Home Cleaning Service</p>
+ <p className="text-xs text-muted-foreground">{wizardCopy.receiptLabel}</p>
  </div>
  <div className="text-right shrink-0">
  <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Ref</p>

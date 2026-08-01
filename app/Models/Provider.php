@@ -28,6 +28,22 @@ class Provider extends Authenticatable
         self::BUSINESS_TYPE_APPOINTMENT,
     ];
 
+    /**
+     * business_niche is freeform (not a DB enum) — these constants are just
+     * named references for niches that have their own tailored wizard copy
+     * (see resources/js/pages/Booking/Index.tsx). Setting business_niche to
+     * a value not listed here is fine; it falls back to generic
+     * business_type-based copy until it's given its own entry.
+     */
+    public const NICHE_BARBER = 'barber';
+
+    public const NICHE_DENTIST = 'dentist';
+
+    public const KNOWN_NICHES = [
+        self::NICHE_BARBER,
+        self::NICHE_DENTIST,
+    ];
+
     protected $fillable = [
         'name',
         'contact_info',
