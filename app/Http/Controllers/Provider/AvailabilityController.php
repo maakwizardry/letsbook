@@ -14,6 +14,7 @@ class AvailabilityController extends Controller
     public function index(Request $request): Response
     {
         $schedule = $request->user()->availabilities()
+            ->whereNull('staff_id')
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->get()
@@ -25,6 +26,7 @@ class AvailabilityController extends Controller
             ]);
 
         $blockedDates = $request->user()->blockedDates()
+            ->whereNull('staff_id')
             ->orderBy('date')
             ->get()
             ->map(fn ($blockedDate) => [
@@ -49,10 +51,14 @@ class AvailabilityController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $validated) {
-            $request->user()->availabilities()->delete();
+            // Scoped to staff_id null only — this page manages the
+            // provider's own default schedule, not any staff member's
+            // individually-set hours (see Provider\StaffController).
+            $request->user()->availabilities()->whereNull('staff_id')->delete();
 
             $rows = collect($validated['schedule'])->map(fn ($range) => [
                 'provider_id' => $request->user()->id,
+                'staff_id' => null,
                 'day_of_week' => $range['day_of_week'],
                 'start_time' => $range['start_time'],
                 'end_time' => $range['end_time'],

@@ -10,6 +10,7 @@ use App\Http\Controllers\Provider\CustomerController;
 use App\Http\Controllers\Provider\DashboardController;
 use App\Http\Controllers\Provider\OrderController;
 use App\Http\Controllers\Provider\ServiceController;
+use App\Http\Controllers\Provider\StaffController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -32,6 +33,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('services', [ServiceController::class, 'index'])->name('services');
     Route::post('services', [ServiceController::class, 'store'])->name('services.store');
     Route::patch('services/{service}', [ServiceController::class, 'update'])->name('services.update');
+    Route::get('staff', [StaffController::class, 'index'])->name('staff');
+    Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
+    Route::patch('staff/{id}', [StaffController::class, 'update'])->name('staff.update');
+    Route::delete('staff/{id}', [StaffController::class, 'destroy'])->name('staff.destroy');
+    Route::put('staff/{id}/availability', [StaffController::class, 'updateAvailability'])->name('staff.availability.update');
 });
 
 Route::get('/business/{slug}', [BookingWizardController::class, 'show'])->name('provider.booking');

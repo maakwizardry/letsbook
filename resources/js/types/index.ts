@@ -35,6 +35,7 @@ export interface User {
  slug: string;
  avatar?: string;
  brand_color: string | null;
+ uses_staff_scheduling?: boolean;
  email_verified_at: string | null;
  created_at: string;
  updated_at: string;
