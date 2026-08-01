@@ -66,6 +66,9 @@ interface WizardCopy {
  introText: string;
  calendarPrefix: string;
  receiptLabel: string;
+ servicesHeading: string;
+ servicesSubtext: string;
+ statsLabel: string;
 }
 
 // The exact wording every real provider sees today — never change these
@@ -77,6 +80,9 @@ const CLEANING_COPY: WizardCopy = {
  introText: 'Pick your home type, choose your services, and grab a time that works — takes about 2 minutes.',
  calendarPrefix: 'Cleaning',
  receiptLabel: 'Home Cleaning Service',
+ servicesHeading: 'Add Services',
+ servicesSubtext: 'Customize your cleaning package.',
+ statsLabel: 'Homes Cleaned',
 };
 
 // Used for business_type=appointment when business_niche is unset, or set
@@ -88,6 +94,9 @@ const GENERIC_APPOINTMENT_COPY: WizardCopy = {
  introText: 'Pick a service, choose any extras, and grab a time that works — takes about 2 minutes.',
  calendarPrefix: 'Appointment',
  receiptLabel: 'Appointment',
+ servicesHeading: 'Add Services',
+ servicesSubtext: 'Customize your visit.',
+ statsLabel: 'Appointments Completed',
 };
 
 // Keyed by Provider::business_niche (see app/Models/Provider.php). Add an
@@ -102,6 +111,9 @@ const NICHE_COPY: Record<string, WizardCopy> = {
  introText: 'Pick a service, choose any extras, and grab a time that works — takes about 2 minutes.',
  calendarPrefix: 'Appointment',
  receiptLabel: 'Barber Appointment',
+ servicesHeading: 'Add Services',
+ servicesSubtext: 'Customize your visit.',
+ statsLabel: 'Cuts Completed',
  },
  dentist: {
  stepTitle: 'Select a Treatment',
@@ -110,6 +122,9 @@ const NICHE_COPY: Record<string, WizardCopy> = {
  introText: 'Pick a treatment, choose any extras, and grab a time that works — takes about 2 minutes.',
  calendarPrefix: 'Appointment',
  receiptLabel: 'Dental Appointment',
+ servicesHeading: 'Add Services',
+ servicesSubtext: 'Customize your visit.',
+ statsLabel: 'Patients Seen',
  },
 };
 
@@ -599,7 +614,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  </span>
  )}
  {provider.completed_cleanings_count && (
- <span>{provider.rating && '•'} {provider.completed_cleanings_count.toLocaleString()}+ Homes Cleaned</span>
+ <span>{provider.rating && '•'} {provider.completed_cleanings_count.toLocaleString()}+ {wizardCopy.statsLabel}</span>
  )}
  {provider.years_in_business && (
  <span>{(provider.rating || provider.completed_cleanings_count) && '•'} {provider.years_in_business}+ Years Experience</span>
@@ -728,8 +743,8 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  {step === 2 && (
  <div className={`p-4 animate-in fade-in ${stepEnterClass} duration-250 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
  <div className="mb-6">
- <h2 className="text-2xl font-bold font-heading text-foreground mb-1">Add Services</h2>
- <p className="text-muted-foreground text-sm">Customize your cleaning package.</p>
+ <h2 className="text-2xl font-bold font-heading text-foreground mb-1">{wizardCopy.servicesHeading}</h2>
+ <p className="text-muted-foreground text-sm">{wizardCopy.servicesSubtext}</p>
  </div>
 
  <div className="space-y-6">
