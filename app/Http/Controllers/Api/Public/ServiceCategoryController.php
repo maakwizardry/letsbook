@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\HomeType;
+use App\Models\ServiceCategory;
 use Illuminate\Http\Request;
 
-class HomeTypeController extends Controller
+class ServiceCategoryController extends Controller
 {
     public function index(Request $request)
     {
@@ -15,7 +15,7 @@ class HomeTypeController extends Controller
         ]);
 
         return response()->json(
-            HomeType::where('provider_id', $request->provider_id)
+            ServiceCategory::where('provider_id', $request->provider_id)
                 ->select('id', 'label', 'provider_id')
                 ->get()
         );

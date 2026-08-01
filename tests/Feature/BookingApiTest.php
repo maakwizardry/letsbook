@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\HomeType;
+use App\Models\ServiceCategory;
 use App\Models\Provider;
 use App\Models\ServiceItem;
 use App\Models\User;
@@ -18,14 +18,14 @@ beforeEach(function () {
     
 
     
-    $this->homeType = HomeType::create([
+    $this->serviceCategory = ServiceCategory::create([
         'provider_id' => $this->provider->id,
         'label' => '1BHK Apartment'
     ]);
     
     $this->serviceItem1 = ServiceItem::create([
         'provider_id' => $this->provider->id,
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'name' => 'Deep Cleaning',
         'price' => 150,
         'category' => 'Cleaning'
@@ -33,7 +33,7 @@ beforeEach(function () {
     
     $this->serviceItem2 = ServiceItem::create([
         'provider_id' => $this->provider->id,
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'name' => 'Standard Cleaning',
         'price' => 100,
         'category' => 'Cleaning'
@@ -41,13 +41,13 @@ beforeEach(function () {
 });
 
 test('can fetch public home types', function () {
-    $response = $this->getJson('/api/home-types');
+    $response = $this->getJson('/api/service-categories');
     $response->assertStatus(200)
              ->assertJsonFragment(['label' => '1BHK Apartment']);
 });
 
 test('can fetch public service items for home type', function () {
-    $response = $this->getJson('/api/service-items?home_type_id=' . $this->homeType->id);
+    $response = $this->getJson('/api/service-items?service_category_id=' . $this->serviceCategory->id);
     $response->assertStatus(200)
              ->assertJsonCount(2)
              ->assertJsonFragment(['name' => 'Deep Cleaning']);
@@ -55,7 +55,7 @@ test('can fetch public service items for home type', function () {
 
 test('can calculate a quote', function () {
     $response = $this->postJson('/api/quote', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id, $this->serviceItem2->id]
     ]);
     
@@ -65,7 +65,7 @@ test('can calculate a quote', function () {
 
 test('can submit a booking', function () {
     $response = $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id, $this->serviceItem2->id],
         'customer_name' => 'John Doe',
         'customer_email' => 'john@example.com',
@@ -84,7 +84,7 @@ test('can submit a booking', function () {
 
 test('provider can fetch their bookings', function () {
     $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Jane Doe',
         'customer_email' => 'jane@example.com',
@@ -98,7 +98,7 @@ test('provider can fetch their bookings', function () {
 
 test('provider can update a booking status', function () {
     $response = $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Jane Doe',
         'customer_email' => 'jane@example.com',
@@ -118,7 +118,7 @@ test('provider can update a booking status', function () {
 test('prevents double booking within 1 hour', function () {
     // First booking at 10:00
     $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Alice',
         'scheduled_at' => '2026-08-01 10:00:00'
@@ -126,7 +126,7 @@ test('prevents double booking within 1 hour', function () {
 
     // Second booking at 10:30 should fail
     $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Bob',
         'scheduled_at' => '2026-08-01 10:30:00'
@@ -134,7 +134,7 @@ test('prevents double booking within 1 hour', function () {
     
     // Second booking at 11:00 should succeed (exactly 1 hour apart)
     $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Charlie',
         'scheduled_at' => '2026-08-01 11:00:00'
@@ -144,7 +144,7 @@ test('prevents double booking within 1 hour', function () {
 test('cancelled bookings free up the slot', function () {
     // First booking at 10:00
     $bookingResponse = $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Alice',
         'scheduled_at' => '2026-08-01 10:00:00'
@@ -159,7 +159,7 @@ test('cancelled bookings free up the slot', function () {
     
     // Booking same slot should now succeed
     $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Bob',
         'scheduled_at' => '2026-08-01 10:00:00'
@@ -168,14 +168,14 @@ test('cancelled bookings free up the slot', function () {
 
 test('public endpoint returns booked slots and ignores cancelled ones', function () {
     $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Alice',
         'scheduled_at' => '2026-08-01 10:00:00'
     ]);
     
     $cancelledResponse = $this->postJson('/api/bookings', [
-        'home_type_id' => $this->homeType->id,
+        'service_category_id' => $this->serviceCategory->id,
         'service_item_ids' => [$this->serviceItem1->id],
         'customer_name' => 'Bob',
         'scheduled_at' => '2026-08-01 15:00:00'

@@ -47,9 +47,9 @@ class Provider extends Authenticatable
         ];
     }
 
-    public function homeTypes()
+    public function serviceCategories()
     {
-        return $this->hasMany(HomeType::class);
+        return $this->hasMany(ServiceCategory::class);
     }
 
     public function serviceItems()
@@ -83,27 +83,27 @@ class Provider extends Authenticatable
      */
     public function seedDefaultCatalog(): void
     {
-        $homeTypes = [
+        $serviceCategories = [
             '1 Bedroom Apartment' => ['standard' => 100, 'deep' => 150],
             '2 Bedroom Apartment' => ['standard' => 140, 'deep' => 200],
             '3+ Bedroom / House' => ['standard' => 180, 'deep' => 260],
         ];
 
-        foreach ($homeTypes as $label => $prices) {
-            $homeType = $this->homeTypes()->create(['label' => $label]);
+        foreach ($serviceCategories as $label => $prices) {
+            $serviceCategory = $this->serviceCategories()->create(['label' => $label]);
 
             $this->serviceItems()->create([
                 'name' => "Standard Cleaning ({$label})",
                 'price' => $prices['standard'],
                 'category' => 'Standard Cleaning',
-                'home_type_id' => $homeType->id,
+                'service_category_id' => $serviceCategory->id,
             ]);
 
             $this->serviceItems()->create([
                 'name' => "Deep Cleaning ({$label})",
                 'price' => $prices['deep'],
                 'category' => 'Deep Cleaning',
-                'home_type_id' => $homeType->id,
+                'service_category_id' => $serviceCategory->id,
             ]);
         }
 
@@ -111,14 +111,14 @@ class Provider extends Authenticatable
             'name' => 'Fridge Cleaning Add-on',
             'price' => 30,
             'category' => 'Add-ons',
-            'home_type_id' => null,
+            'service_category_id' => null,
         ]);
 
         $this->serviceItems()->create([
             'name' => 'Oven Cleaning Add-on',
             'price' => 40,
             'category' => 'Add-ons',
-            'home_type_id' => null,
+            'service_category_id' => null,
         ]);
 
         $this->seedDefaultAvailability();

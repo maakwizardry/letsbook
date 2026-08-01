@@ -36,7 +36,7 @@ class GenerateDemoBookings extends Command
             return self::FAILURE;
         }
 
-        if ($provider->homeTypes()->count() === 0 || $provider->serviceItems()->count() === 0) {
+        if ($provider->serviceCategories()->count() === 0 || $provider->serviceItems()->count() === 0) {
             $this->info("Provider \"{$provider->name}\" has no catalog yet — seeding a default one.");
             $provider->seedDefaultCatalog();
         }
@@ -57,13 +57,13 @@ class GenerateDemoBookings extends Command
 
         $count = max(1, (int) $this->option('count'));
 
-        $homeTypes = $provider->homeTypes()->with(['serviceItems' => function ($query) {
+        $serviceCategories = $provider->serviceCategories()->with(['serviceItems' => function ($query) {
             $query->where('category', '!=', 'Add-ons');
         }])->get();
 
         $addOns = $provider->serviceItems()->where('category', 'Add-ons')->get();
 
-        if ($homeTypes->isEmpty()) {
+        if ($serviceCategories->isEmpty()) {
             $this->error('Provider has no home types to attach bookings to.');
 
             return self::FAILURE;
@@ -71,8 +71,8 @@ class GenerateDemoBookings extends Command
 
         $customers = $this->makeCustomerPool();
 
-        $this->withProgressBar(range(1, $count), function () use ($provider, $homeTypes, $addOns, $customers) {
-            $this->generateBooking($provider, $homeTypes, $addOns, $customers);
+        $this->withProgressBar(range(1, $count), function () use ($provider, $serviceCategories, $addOns, $customers) {
+            $this->generateBooking($provider, $serviceCategories, $addOns, $customers);
         });
 
         $this->newLine(2);
@@ -120,15 +120,15 @@ class GenerateDemoBookings extends Command
         return $existing->concat($new)->values();
     }
 
-    private function generateBooking(Provider $provider, \Illuminate\Support\Collection $homeTypes, \Illuminate\Support\Collection $addOns, \Illuminate\Support\Collection $customers): void
+    private function generateBooking(Provider $provider, \Illuminate\Support\Collection $serviceCategories, \Illuminate\Support\Collection $addOns, \Illuminate\Support\Collection $customers): void
     {
         $createdAt = $this->weightedRecentDate();
 
-        $homeType = $homeTypes->random();
-        $services = $homeType->serviceItems;
+        $serviceCategory = $serviceCategories->random();
+        $services = $serviceCategory->serviceItems;
 
         if ($services->isEmpty()) {
-            $services = $provider->serviceItems()->where('home_type_id', $homeType->id)->get();
+            $services = $provider->serviceItems()->where('service_category_id', $serviceCategory->id)->get();
         }
 
         $lineItems = $services->isNotEmpty()
@@ -166,7 +166,7 @@ class GenerateDemoBookings extends Command
         $booking = new Booking([
             'provider_id' => $provider->id,
             'customer_id' => $customers->random()->id,
-            'home_type_id' => $homeType->id,
+            'service_category_id' => $serviceCategory->id,
             'reference_id' => 'BKG-'.strtoupper(Str::random(6)),
             'total_quote' => $totalQuote,
             'payment_method' => fake()->randomElement(['cash', 'cash', 'etransfer', 'etransfer', 'etransfer']),

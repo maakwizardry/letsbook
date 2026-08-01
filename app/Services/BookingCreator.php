@@ -28,7 +28,7 @@ class BookingCreator
      * one, so the public booking flow needs no changes to keep producing
      * 1-hour bookings.
      *
-     * @param  array{provider_id: int, booking_series_id?: int|null, customer_id: int, home_type_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours?: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
+     * @param  array{provider_id: int, booking_series_id?: int|null, customer_id: int, service_category_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours?: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
      */
     public function create(array $attributes, Collection $serviceItems): Booking
     {
@@ -46,7 +46,7 @@ class BookingCreator
             'provider_id' => $attributes['provider_id'],
             'booking_series_id' => $attributes['booking_series_id'] ?? null,
             'customer_id' => $attributes['customer_id'],
-            'home_type_id' => $attributes['home_type_id'],
+            'service_category_id' => $attributes['service_category_id'],
             'reference_id' => 'BKG-'.strtoupper(Str::random(6)),
             'total_quote' => $serviceItems->sum('price'),
             'payment_method' => $attributes['payment_method'],
@@ -77,7 +77,7 @@ class BookingCreator
      * since a reschedule can move the reminder from past to future or vice
      * versa.
      *
-     * @param  array{home_type_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
+     * @param  array{service_category_id: int, scheduled_at: \Illuminate\Support\Carbon, duration_hours: int, payment_method: string, notes?: string|null, reminder_minutes_before?: int|null, customer_email?: string|null}  $attributes
      */
     public function update(Booking $booking, array $attributes, Collection $serviceItems): Booking
     {
@@ -92,7 +92,7 @@ class BookingCreator
         }
 
         $booking->update([
-            'home_type_id' => $attributes['home_type_id'],
+            'service_category_id' => $attributes['service_category_id'],
             'total_quote' => $serviceItems->sum('price'),
             'payment_method' => $attributes['payment_method'],
             'notes' => $attributes['notes'] ?? null,

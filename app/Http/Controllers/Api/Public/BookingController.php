@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Api\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Booking;
 use App\Models\BlockedDate;
-use App\Models\BookingItem;
 use App\Models\Customer;
-use App\Models\HomeType;
+use App\Models\ServiceCategory;
 use App\Models\ServiceItem;
 use App\Notifications\BookingConfirmationNotification;
 use App\Notifications\NewBookingNotification;
+use App\Services\BookingCreator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
+    public function __construct(private BookingCreator $bookingCreator) {}
+
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'home_type_id' => 'required|exists:home_types,id',
+            'service_category_id' => 'required|exists:service_categories,id',
             'service_item_ids' => 'required|array',
             'service_item_ids.*' => 'exists:service_items,id',
             'customer_name' => 'required|string|max:255',
@@ -45,8 +45,8 @@ class BookingController extends Controller
             ], 422);
         }
 
-        $homeType = HomeType::findOrFail($validated['home_type_id']);
-        $providerId = $homeType->provider_id;
+        $serviceCategory = ServiceCategory::findOrFail($validated['service_category_id']);
+        $providerId = $serviceCategory->provider_id;
 
         $items = ServiceItem::whereIn('id', $validated['service_item_ids'])->get();
 
@@ -57,9 +57,16 @@ class BookingController extends Controller
             ], 422);
         }
 
-        $total = $items->sum('price');
-
         $scheduledAt = \Carbon\Carbon::parse($validated['scheduled_at']);
+
+        // The job takes as long as its most time-consuming selected item —
+        // not the sum of all of them — since every existing service item
+        // defaults to 1 hour, this guarantees today's flat 1-hour bookings
+        // stay exactly 1 hour regardless of how many items are picked. Only
+        // once individual items get real, differentiated durations (a
+        // provider-facing control that doesn't exist yet) does this start
+        // producing anything other than 1.
+        $durationHours = $items->max('duration_hours') ?? 1;
 
         if (BlockedDate::where('provider_id', $providerId)->whereDate('date', $scheduledAt->toDateString())->exists()) {
             return response()->json([
@@ -68,15 +75,7 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Assuming 1 hour blocks. Check if any active booking overlaps with this time.
-        // Overlap occurs if an existing booking's time is within 1 hour before or after the new time.
-        $overlap = Booking::where('provider_id', $providerId)
-            ->where('status', '!=', Booking::STATUS_CANCELLED)
-            ->where('scheduled_at', '>', $scheduledAt->copy()->subHour())
-            ->where('scheduled_at', '<', $scheduledAt->copy()->addHour())
-            ->exists();
-
-        if ($overlap) {
+        if ($this->bookingCreator->hasOverlap($providerId, $scheduledAt, $durationHours)) {
             return response()->json([
                 'message' => 'This time slot is already booked.',
                 'errors' => ['scheduled_at' => ['This time slot is already booked.']]
@@ -113,37 +112,19 @@ class BookingController extends Controller
             $customer->update($addressAttributes);
         }
 
-        $remindAt = null;
-        if (!empty($validated['reminder_minutes_before'])) {
-            $candidate = $scheduledAt->copy()->subMinutes($validated['reminder_minutes_before']);
-            if ($candidate->isFuture()) {
-                $remindAt = $candidate;
-            }
-        }
-
-        $booking = Booking::create([
+        $booking = $this->bookingCreator->create([
             'provider_id' => $providerId,
             'customer_id' => $customer->id,
-            'home_type_id' => $validated['home_type_id'],
-            'reference_id' => 'BKG-' . strtoupper(Str::random(6)),
-            'total_quote' => $total,
-            'payment_method' => $validated['payment_method'],
-            'status' => Booking::STATUS_PENDING,
-            'notes' => $validated['notes'] ?? null,
+            'service_category_id' => $validated['service_category_id'],
             'scheduled_at' => $scheduledAt,
-            'reminder_minutes_before' => $remindAt ? $validated['reminder_minutes_before'] : null,
-            'remind_at' => $remindAt,
-        ]);
+            'duration_hours' => $durationHours,
+            'payment_method' => $validated['payment_method'],
+            'notes' => $validated['notes'] ?? null,
+            'reminder_minutes_before' => $validated['reminder_minutes_before'] ?? null,
+            'customer_email' => $validated['customer_email'] ?? null,
+        ], $items);
 
-        foreach ($items as $item) {
-            BookingItem::create([
-                'booking_id' => $booking->id,
-                'service_item_id' => $item->id,
-                'price_at_booking' => $item->price,
-            ]);
-        }
-
-        $booking->load('items.serviceItem', 'customer', 'homeType', 'provider');
+        $booking->load('items.serviceItem', 'customer', 'serviceCategory', 'provider');
 
         // Notifying provider and customer
         if ($booking->provider && $booking->provider->email) {

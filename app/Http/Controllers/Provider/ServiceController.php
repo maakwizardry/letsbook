@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Provider;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServiceItem;
+use App\Services\BookingCreator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,11 +23,11 @@ class ServiceController extends Controller
     public function index(Request $request): Response
     {
         $items = $request->user()->serviceItems()
-            ->with('homeType')
+            ->with('serviceCategory')
             ->get()
             ->sortBy(fn (ServiceItem $item) => [
                 self::categoryRank($item->category),
-                $item->home_type_id ?? PHP_INT_MAX,
+                $item->service_category_id ?? PHP_INT_MAX,
                 $item->id,
             ]);
 
@@ -38,8 +39,8 @@ class ServiceController extends Controller
                     'id' => $item->id,
                     'name' => $item->name,
                     'price' => (float) $item->price,
-                    'home_type_label' => $item->homeType?->label,
-                    'home_type_id' => $item->home_type_id,
+                    'service_category_label' => $item->serviceCategory?->label,
+                    'service_category_id' => $item->service_category_id,
                     'is_active' => $item->is_active,
                 ])->values(),
             ])
@@ -48,7 +49,7 @@ class ServiceController extends Controller
         return Inertia::render('services', [
             'categories' => $categories,
             'total_count' => $items->count(),
-            'homeTypes' => $request->user()->homeTypes()->get(['id', 'label']),
+            'serviceCategories' => $request->user()->serviceCategories()->get(['id', 'label']),
         ]);
     }
 
@@ -74,7 +75,8 @@ class ServiceController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'min:0'],
             'category' => ['nullable', 'string', 'max:255'],
-            'home_type_id' => ['nullable', Rule::exists('home_types', 'id')->where('provider_id', $request->user()->id)],
+            'service_category_id' => ['nullable', Rule::exists('service_categories', 'id')->where('provider_id', $request->user()->id)],
+            'duration_hours' => ['nullable', 'integer', 'min:1', 'max:'.BookingCreator::MAX_DURATION_HOURS],
         ]);
 
         $request->user()->serviceItems()->create($validated);
@@ -90,6 +92,7 @@ class ServiceController extends Controller
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'price' => ['sometimes', 'required', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'required', 'boolean'],
+            'duration_hours' => ['sometimes', 'required', 'integer', 'min:1', 'max:'.BookingCreator::MAX_DURATION_HOURS],
         ]);
 
         $service->update($validated);

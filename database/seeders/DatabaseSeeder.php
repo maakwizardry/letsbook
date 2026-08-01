@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\HomeType;
+use App\Models\ServiceCategory;
 use App\Models\Provider;
 use App\Models\ServiceItem;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -26,17 +26,17 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create Home Types
-        $homeType1 = HomeType::create([
+        $serviceCategory1 = ServiceCategory::create([
             'provider_id' => $provider->id,
             'label' => '1BHK Apartment',
         ]);
 
-        $homeType2 = HomeType::create([
+        $serviceCategory2 = ServiceCategory::create([
             'provider_id' => $provider->id,
             'label' => '2BHK Apartment',
         ]);
 
-        $homeType3 = HomeType::create([
+        $serviceCategory3 = ServiceCategory::create([
             'provider_id' => $provider->id,
             'label' => '3BHK+ / Villa',
         ]);
@@ -47,7 +47,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Deep Cleaning (1BHK)',
             'price' => 150.00,
             'category' => 'Deep Cleaning',
-            'home_type_id' => $homeType1->id,
+            'service_category_id' => $serviceCategory1->id,
         ]);
 
         ServiceItem::create([
@@ -55,7 +55,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Standard Cleaning (1BHK)',
             'price' => 100.00,
             'category' => 'Standard Cleaning',
-            'home_type_id' => $homeType1->id,
+            'service_category_id' => $serviceCategory1->id,
         ]);
 
         ServiceItem::create([
@@ -63,7 +63,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Deep Cleaning (2BHK)',
             'price' => 200.00,
             'category' => 'Deep Cleaning',
-            'home_type_id' => $homeType2->id,
+            'service_category_id' => $serviceCategory2->id,
         ]);
 
         ServiceItem::create([
@@ -71,7 +71,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Standard Cleaning (2BHK)',
             'price' => 140.00,
             'category' => 'Standard Cleaning',
-            'home_type_id' => $homeType2->id,
+            'service_category_id' => $serviceCategory2->id,
         ]);
 
         ServiceItem::create([
@@ -79,7 +79,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Fridge Cleaning Add-on',
             'price' => 30.00,
             'category' => 'Add-ons',
-            'home_type_id' => null, // applies to any
+            'service_category_id' => null, // applies to any
         ]);
 
         ServiceItem::create([
@@ -87,7 +87,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Oven Cleaning Add-on',
             'price' => 40.00,
             'category' => 'Add-ons',
-            'home_type_id' => null, // applies to any
+            'service_category_id' => null, // applies to any
         ]);
     }
 }

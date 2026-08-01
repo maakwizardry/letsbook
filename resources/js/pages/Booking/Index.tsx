@@ -69,12 +69,12 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  const stepEnterClass = direction === 'forward' ? 'slide-in-from-right-4' : 'slide-in-from-left-4';
 
  // Data states
- const [homeTypes, setHomeTypes] = useState<any[]>([]);
+ const [serviceCategories, setServiceCategories] = useState<any[]>([]);
  const [serviceItems, setServiceItems] = useState<any[]>([]);
  const [bookedSlots, setBookedSlots] = useState<{ start: string; duration_hours: number }[]>([]);
  
  // Selection states
- const [selectedHomeTypeId, setSelectedHomeTypeId] = useState<number | null>(null);
+ const [selectedServiceCategoryId, setSelectedServiceCategoryId] = useState<number | null>(null);
  const [cart, setCart] = useState<Record<number, number>>({}); // { serviceId: quantity }
  const [selectedDate, setSelectedDate] = useState<string>('');
  const [selectedTime, setSelectedTime] = useState<string>('');
@@ -159,22 +159,22 @@ export default function BookingWizard({ provider, availability = [], blockedDate
 
  // Initial fetch
  useEffect(() => {
- fetch(`/api/home-types?provider_id=${provider.id}`)
+ fetch(`/api/service-categories?provider_id=${provider.id}`)
  .then(res => res.json())
- .then(data => setHomeTypes(data));
+ .then(data => setServiceCategories(data));
  }, [provider.id]);
 
  // Fetch services when home type changes
  useEffect(() => {
- if (selectedHomeTypeId) {
- fetch(`/api/service-items?home_type_id=${selectedHomeTypeId}`)
+ if (selectedServiceCategoryId) {
+ fetch(`/api/service-items?service_category_id=${selectedServiceCategoryId}`)
  .then(res => res.json())
  .then(data => {
  setServiceItems(data);
  setCart({}); // Reset cart on home type change
  });
  }
- }, [selectedHomeTypeId]);
+ }, [selectedServiceCategoryId]);
 
  // Fetch booked slots when date changes
  useEffect(() => {
@@ -272,7 +272,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  method: 'POST',
  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
  body: JSON.stringify({
- home_type_id: selectedHomeTypeId,
+ service_category_id: selectedServiceCategoryId,
  service_item_ids,
  scheduled_at,
  customer_name: customer.name,
@@ -606,11 +606,11 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  <p className="text-muted-foreground text-sm">Pricing and services are tailored to your property size.</p>
  </div>
  <div className="space-y-4">
- {homeTypes.map(type => (
+ {serviceCategories.map(type => (
  <button
  key={type.id}
  onClick={() => {
- setSelectedHomeTypeId(type.id);
+ setSelectedServiceCategoryId(type.id);
  goToStep(2);
  }}
  className="w-full flex items-center p-4 bg-card rounded-2xl border border-border hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-300 active:scale-[0.97] group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

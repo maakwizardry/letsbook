@@ -28,7 +28,7 @@ class Booking extends Model
         'provider_id',
         'booking_series_id',
         'customer_id',
-        'home_type_id',
+        'service_category_id',
         'reference_id',
         'total_quote',
         'payment_method',
@@ -62,9 +62,9 @@ class Booking extends Model
         return $this->belongsTo(Customer::class);
     }
 
-    public function homeType()
+    public function serviceCategory()
     {
-        return $this->belongsTo(HomeType::class);
+        return $this->belongsTo(ServiceCategory::class);
     }
 
     public function bookingSeries()

@@ -15,17 +15,17 @@ interface ServiceItemRow {
  id: number;
  name: string;
  price: number;
- home_type_label: string | null;
- home_type_id: number | null;
+ service_category_label: string | null;
+ service_category_id: number | null;
  is_active: boolean;
 }
 
-interface ServiceCategory {
+interface ServiceCategoryGroup {
  category: string;
  items: ServiceItemRow[];
 }
 
-interface HomeType {
+interface ServiceCategory {
  id: number;
  label: string;
 }
@@ -111,18 +111,18 @@ function ActiveToggleButton({ item }: { item: ServiceItemRow }) {
 }
 
 function NewServiceForm({
- homeTypes,
+ serviceCategories,
  categoryOptions,
  onClose,
 }: {
- homeTypes: HomeType[];
+ serviceCategories: ServiceCategory[];
  categoryOptions: string[];
  onClose: () => void;
 }) {
  const [name, setName] = useState('');
  const [price, setPrice] = useState('');
  const [category, setCategory] = useState('');
- const [homeTypeId, setHomeTypeId] = useState('');
+ const [serviceCategoryId, setServiceCategoryId] = useState('');
  const [pending, setPending] = useState(false);
  const [error, setError] = useState('');
 
@@ -140,7 +140,7 @@ function NewServiceForm({
  name: name.trim(),
  price: priceValue,
  category: category.trim() || null,
- home_type_id: homeTypeId ? Number(homeTypeId) : null,
+ service_category_id: serviceCategoryId ? Number(serviceCategoryId) : null,
  },
  {
  preserveScroll: true,
@@ -174,12 +174,12 @@ function NewServiceForm({
  <Label htmlFor="new-service-home-type">Home type <span className="font-normal text-muted-foreground">(optional)</span></Label>
  <select
  id="new-service-home-type"
- value={homeTypeId}
- onChange={(e) => setHomeTypeId(e.target.value)}
+ value={serviceCategoryId}
+ onChange={(e) => setServiceCategoryId(e.target.value)}
  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
  >
  <option value="">No specific home type (add-on)</option>
- {homeTypes.map((ht) => (
+ {serviceCategories.map((ht) => (
  <option key={ht.id} value={ht.id}>{ht.label}</option>
  ))}
  </select>
@@ -194,7 +194,7 @@ function NewServiceForm({
  );
 }
 
-function ServiceCard({ item, showHomeType }: { item: ServiceItemRow; showHomeType: boolean }) {
+function ServiceCard({ item, showServiceCategory }: { item: ServiceItemRow; showServiceCategory: boolean }) {
  const editor = useServiceItemEditor(item);
 
  if (editor.isEditing) {
@@ -239,7 +239,7 @@ function ServiceCard({ item, showHomeType }: { item: ServiceItemRow; showHomeTyp
  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inactive</span>
  )}
  </div>
- {showHomeType && <div className="mt-0.5 text-xs text-muted-foreground">{item.home_type_label}</div>}
+ {showServiceCategory && <div className="mt-0.5 text-xs text-muted-foreground">{item.service_category_label}</div>}
  </div>
  <div className="flex items-center gap-1">
  <div className="font-semibold text-foreground whitespace-nowrap">{formatMoney(item.price)}</div>
@@ -253,7 +253,7 @@ function ServiceCard({ item, showHomeType }: { item: ServiceItemRow; showHomeTyp
  );
 }
 
-function ServiceTableRow({ item, showHomeType }: { item: ServiceItemRow; showHomeType: boolean }) {
+function ServiceTableRow({ item, showServiceCategory }: { item: ServiceItemRow; showServiceCategory: boolean }) {
  const editor = useServiceItemEditor(item);
 
  if (editor.isEditing) {
@@ -263,7 +263,7 @@ function ServiceTableRow({ item, showHomeType }: { item: ServiceItemRow; showHom
  <Input value={editor.name} onChange={(e) => editor.setName(e.target.value)} className="h-8 text-sm"/>
  {editor.error && <p className="mt-1 text-xs text-destructive">{editor.error}</p>}
  </td>
- {showHomeType && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.home_type_label}</td>}
+ {showServiceCategory && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.service_category_label}</td>}
  <td className="px-4 py-3">
  <div className="flex items-center gap-2">
  <Input
@@ -296,7 +296,7 @@ function ServiceTableRow({ item, showHomeType }: { item: ServiceItemRow; showHom
  )}
  </div>
  </td>
- {showHomeType && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.home_type_label}</td>}
+ {showServiceCategory && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.service_category_label}</td>}
  <td className="px-4 py-3 whitespace-nowrap">
  <div className="flex items-center justify-between gap-2">
  <span className="font-semibold text-foreground">{formatMoney(item.price)}</span>
@@ -315,11 +315,11 @@ function ServiceTableRow({ item, showHomeType }: { item: ServiceItemRow; showHom
 export default function Services({
  categories,
  total_count,
- homeTypes = [],
+ serviceCategories = [],
 }: {
- categories: ServiceCategory[];
+ categories: ServiceCategoryGroup[];
  total_count: number;
- homeTypes?: HomeType[];
+ serviceCategories?: ServiceCategory[];
 }) {
  const [isAdding, setIsAdding] = useState(false);
 
@@ -345,7 +345,7 @@ export default function Services({
  </div>
 
  {isAdding && (
- <NewServiceForm homeTypes={homeTypes} categoryOptions={categoryOptions} onClose={() => setIsAdding(false)}/>
+ <NewServiceForm serviceCategories={serviceCategories} categoryOptions={categoryOptions} onClose={() => setIsAdding(false)}/>
  )}
 
  {categories.length === 0 ? (
@@ -356,7 +356,7 @@ export default function Services({
  ) : (
  <div className="flex flex-col gap-8">
  {categories.map((group) => {
- const showHomeType = group.items.some((item) => item.home_type_label);
+ const showServiceCategory = group.items.some((item) => item.service_category_label);
 
  return (
  <div key={group.category}>
@@ -365,7 +365,7 @@ export default function Services({
  {/* Mobile: card list */}
  <div className="flex flex-col gap-3 sm:hidden">
  {group.items.map((item) => (
- <ServiceCard key={item.id} item={item} showHomeType={showHomeType}/>
+ <ServiceCard key={item.id} item={item} showServiceCategory={showServiceCategory}/>
  ))}
  </div>
 
@@ -376,13 +376,13 @@ export default function Services({
  <thead>
  <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
  <th className="px-4 py-3 whitespace-nowrap">Service</th>
- {showHomeType && <th className="px-4 py-3 whitespace-nowrap">Home Type</th>}
+ {showServiceCategory && <th className="px-4 py-3 whitespace-nowrap">Home Type</th>}
  <th className="px-4 py-3 whitespace-nowrap">Price</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-border">
  {group.items.map((item) => (
- <ServiceTableRow key={item.id} item={item} showHomeType={showHomeType}/>
+ <ServiceTableRow key={item.id} item={item} showServiceCategory={showServiceCategory}/>
  ))}
  </tbody>
  </table>

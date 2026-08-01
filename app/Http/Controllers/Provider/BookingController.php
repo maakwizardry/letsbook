@@ -43,7 +43,7 @@ class BookingController extends Controller
         $providerId = $request->user()->id;
 
         $validated = $request->validate([
-            'home_type_id' => ['required', Rule::exists('home_types', 'id')->where('provider_id', $providerId)],
+            'service_category_id' => ['required', Rule::exists('service_categories', 'id')->where('provider_id', $providerId)],
             'service_item_ids' => ['required', 'array', 'min:1'],
             'service_item_ids.*' => [Rule::exists('service_items', 'id')->where('provider_id', $providerId)],
             'customer_name' => ['required', 'string', 'max:255'],
@@ -113,7 +113,7 @@ class BookingController extends Controller
             $booking = $this->bookingCreator->create([
                 'provider_id' => $providerId,
                 'customer_id' => $customer->id,
-                'home_type_id' => $validated['home_type_id'],
+                'service_category_id' => $validated['service_category_id'],
                 'scheduled_at' => $scheduledAt,
                 'duration_hours' => $validated['duration_hours'],
                 'payment_method' => $validated['payment_method'],
@@ -126,7 +126,7 @@ class BookingController extends Controller
                 $series = BookingSeries::create([
                     'provider_id' => $providerId,
                     'customer_id' => $customer->id,
-                    'home_type_id' => $validated['home_type_id'],
+                    'service_category_id' => $validated['service_category_id'],
                     'frequency' => $validated['frequency'],
                     'days_of_week' => in_array($validated['frequency'], ['weekly', 'biweekly'], true) ? $validated['days_of_week'] : null,
                     'starts_at' => $scheduledAt,
@@ -169,7 +169,7 @@ class BookingController extends Controller
         $validated = $request->validate([
             'status' => ['sometimes', 'required', 'string', Rule::in(Booking::STATUSES)],
             'is_paid' => ['sometimes', 'required', 'boolean'],
-            'home_type_id' => ['sometimes', 'required', Rule::exists('home_types', 'id')->where('provider_id', $providerId)],
+            'service_category_id' => ['sometimes', 'required', Rule::exists('service_categories', 'id')->where('provider_id', $providerId)],
             'service_item_ids' => ['sometimes', 'required', 'array', 'min:1'],
             'service_item_ids.*' => [Rule::exists('service_items', 'id')->where('provider_id', $providerId)],
             'customer_name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -225,7 +225,7 @@ class BookingController extends Controller
                 $items = ServiceItem::whereIn('id', $validated['service_item_ids'])->get();
 
                 $this->bookingCreator->update($booking, [
-                    'home_type_id' => $validated['home_type_id'],
+                    'service_category_id' => $validated['service_category_id'],
                     'scheduled_at' => $scheduledAt,
                     'duration_hours' => $validated['duration_hours'],
                     'payment_method' => $validated['payment_method'],

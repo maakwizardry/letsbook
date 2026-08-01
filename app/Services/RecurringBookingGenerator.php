@@ -75,7 +75,7 @@ class RecurringBookingGenerator
                         'provider_id' => $series->provider_id,
                         'booking_series_id' => $series->id,
                         'customer_id' => $series->customer_id,
-                        'home_type_id' => $series->home_type_id,
+                        'service_category_id' => $series->service_category_id,
                         'scheduled_at' => $scheduledAt,
                         'duration_hours' => $series->duration_hours,
                         'payment_method' => $series->payment_method,

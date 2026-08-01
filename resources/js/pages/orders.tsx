@@ -32,7 +32,7 @@ interface Customer {
  longitude: number | null;
 }
 
-interface HomeType {
+interface ServiceCategory {
  id: number;
  label: string;
 }
@@ -56,7 +56,7 @@ interface Booking {
  notes: string | null;
  reminder_minutes_before: number | null;
  customer: Customer | null;
- home_type: HomeType | null;
+ service_category: ServiceCategory | null;
  booking_series: BookingSeriesSummary | null;
 }
 
@@ -79,7 +79,7 @@ interface ServiceItem {
  id: number;
  name: string;
  price: number;
- home_type_id: number | null;
+ service_category_id: number | null;
 }
 
 interface ServiceItemCategory {
@@ -113,7 +113,7 @@ function bookingCalendarUrl(booking: Booking) {
  title: `Cleaning — ${booking.customer?.name ?? booking.reference_id}`,
  start: parseFloatingIsoDateTime(booking.scheduled_at),
  durationHours: booking.duration_hours,
- details: `${booking.home_type?.label ?? ''} · ${booking.items_count} item${booking.items_count === 1 ? '' : 's'}`.trim(),
+ details: `${booking.service_category?.label ?? ''} · ${booking.items_count} item${booking.items_count === 1 ? '' : 's'}`.trim(),
  location: booking.customer?.address ? `${booking.customer.address}${booking.customer.unit_number ? `, Unit ${booking.customer.unit_number}` : ''}` : undefined,
  });
 }
@@ -262,7 +262,7 @@ function DateRangeFilter({ from, to, onApply }: { from: string; to: string; onAp
 // booking except New-only recurrence settings, so both forms stay visually
 // and behaviorally identical without duplicating the field markup.
 interface BookingFormFieldsData {
- home_type_id: string;
+ service_category_id: string;
  service_item_ids: number[];
  customer_name: string;
  customer_phone: string;
@@ -294,7 +294,7 @@ interface NewBookingForm extends BookingFormFieldsData {
 type EditBookingFormData = BookingFormFieldsData;
 
 const emptyNewBookingForm: NewBookingForm = {
- home_type_id: '',
+ service_category_id: '',
  service_item_ids: [],
  customer_name: '',
  customer_phone: '',
@@ -333,7 +333,7 @@ function BookingFormFields({
  data,
  setData,
  errors,
- homeTypes,
+ serviceCategories,
  serviceItemCategories,
  selectedAddress,
  onAddressChange,
@@ -342,7 +342,7 @@ function BookingFormFields({
  data: BookingFormFieldsData;
  setData: (key: any, value?: any) => void;
  errors: Partial<Record<string, string>>;
- homeTypes: HomeType[];
+ serviceCategories: ServiceCategory[];
  serviceItemCategories: ServiceItemCategory[];
  selectedAddress: SelectedAddress | null;
  onAddressChange: (address: SelectedAddress | null) => void;
@@ -353,14 +353,14 @@ function BookingFormFields({
  const allItems = useMemo(() => serviceItemCategories.flatMap((c) => c.items), [serviceItemCategories]);
 
  const availableItems = useMemo(() => {
- const homeTypeId = data.home_type_id ? Number(data.home_type_id) : null;
+ const serviceCategoryId = data.service_category_id ? Number(data.service_category_id) : null;
  return serviceItemCategories
  .map((category) => ({
  category: category.category,
- items: category.items.filter((item) => item.home_type_id === null || item.home_type_id === homeTypeId),
+ items: category.items.filter((item) => item.service_category_id === null || item.service_category_id === serviceCategoryId),
  }))
  .filter((category) => category.items.length > 0);
- }, [serviceItemCategories, data.home_type_id]);
+ }, [serviceItemCategories, data.service_category_id]);
 
  const total = useMemo(
  () => data.service_item_ids.reduce((sum, id) => sum + (allItems.find((item) => item.id === id)?.price ?? 0), 0),
@@ -371,14 +371,14 @@ function BookingFormFields({
  setData('service_item_ids', checked ? [...data.service_item_ids, id] : data.service_item_ids.filter((i) => i !== id));
  };
 
- const onHomeTypeChange = (value: string) => {
- const homeTypeId = Number(value);
+ const onServiceCategoryChange = (value: string) => {
+ const serviceCategoryId = Number(value);
  setData((prev: BookingFormFieldsData) => ({
  ...prev,
- home_type_id: value,
+ service_category_id: value,
  service_item_ids: prev.service_item_ids.filter((id) => {
  const item = allItems.find((i) => i.id === id);
- return item && (item.home_type_id === null || item.home_type_id === homeTypeId);
+ return item && (item.service_category_id === null || item.service_category_id === serviceCategoryId);
  }),
  }));
  };
@@ -447,21 +447,21 @@ function BookingFormFields({
  </div>
 
  <div className="grid gap-1.5">
- <Label htmlFor="home_type_id">Home type</Label>
- <Select value={data.home_type_id} onValueChange={onHomeTypeChange}>
- <SelectTrigger id="home_type_id" className="w-full">
+ <Label htmlFor="service_category_id">Home type</Label>
+ <Select value={data.service_category_id} onValueChange={onServiceCategoryChange}>
+ <SelectTrigger id="service_category_id" className="w-full">
  <SelectValue placeholder="Select a home type"/>
  </SelectTrigger>
  <SelectContent>
- {homeTypes.map((ht) => (
+ {serviceCategories.map((ht) => (
  <SelectItem key={ht.id} value={String(ht.id)}>{ht.label}</SelectItem>
  ))}
  </SelectContent>
  </Select>
- <InputError message={errors.home_type_id}/>
+ <InputError message={errors.service_category_id}/>
  </div>
 
- {data.home_type_id && (
+ {data.service_category_id && (
  <div className="grid gap-3">
  <Label>Services</Label>
  <div className="flex flex-col gap-3 rounded-md border border-border p-3">
@@ -564,7 +564,7 @@ function BookingFormFields({
  );
 }
 
-function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: HomeType[]; serviceItemCategories: ServiceItemCategory[] }) {
+function NewBookingDialog({ serviceCategories, serviceItemCategories }: { serviceCategories: ServiceCategory[]; serviceItemCategories: ServiceItemCategory[] }) {
  const [open, setOpen] = useState(false);
  const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
  const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm<NewBookingForm>(emptyNewBookingForm);
@@ -663,7 +663,7 @@ function NewBookingDialog({ homeTypes, serviceItemCategories }: { homeTypes: Hom
  data={data}
  setData={setData}
  errors={errors}
- homeTypes={homeTypes}
+ serviceCategories={serviceCategories}
  serviceItemCategories={serviceItemCategories}
  selectedAddress={selectedAddress}
  onAddressChange={onAddressChange}
@@ -767,7 +767,7 @@ function bookingToEditForm(booking: Booking): EditBookingFormData {
  const scheduled = parseFloatingIsoDateTime(booking.scheduled_at);
 
  return {
- home_type_id: booking.home_type ? String(booking.home_type.id) : '',
+ service_category_id: booking.service_category ? String(booking.service_category.id) : '',
  service_item_ids: booking.items.map((item) => item.service_item_id),
  customer_name: booking.customer?.name ?? '',
  customer_phone: booking.customer?.phone ?? '',
@@ -805,12 +805,12 @@ function bookingToSelectedAddress(booking: Booking): SelectedAddress | null {
  */
 function EditBookingForm({
  booking,
- homeTypes,
+ serviceCategories,
  serviceItemCategories,
  onClose,
 }: {
  booking: Booking;
- homeTypes: HomeType[];
+ serviceCategories: ServiceCategory[];
  serviceItemCategories: ServiceItemCategory[];
  onClose: () => void;
 }) {
@@ -850,7 +850,7 @@ function EditBookingForm({
  data={data}
  setData={setData}
  errors={errors}
- homeTypes={homeTypes}
+ serviceCategories={serviceCategories}
  serviceItemCategories={serviceItemCategories}
  selectedAddress={selectedAddress}
  onAddressChange={onAddressChange}
@@ -867,12 +867,12 @@ function EditBookingForm({
 function EditBookingDialog({
  booking,
  onClose,
- homeTypes,
+ serviceCategories,
  serviceItemCategories,
 }: {
  booking: Booking | null;
  onClose: () => void;
- homeTypes: HomeType[];
+ serviceCategories: ServiceCategory[];
  serviceItemCategories: ServiceItemCategory[];
 }) {
  return (
@@ -884,7 +884,7 @@ function EditBookingDialog({
  </DialogHeader>
 
  {booking && (
- <EditBookingForm key={booking.id} booking={booking} homeTypes={homeTypes} serviceItemCategories={serviceItemCategories} onClose={onClose}/>
+ <EditBookingForm key={booking.id} booking={booking} serviceCategories={serviceCategories} serviceItemCategories={serviceItemCategories} onClose={onClose}/>
  )}
  </DialogContent>
  </Dialog>
@@ -895,13 +895,13 @@ export default function Orders({
  bookings,
  statuses,
  filters,
- homeTypes,
+ serviceCategories,
  serviceItemCategories,
 }: {
  bookings: Booking[];
  statuses: string[];
  filters: Filters;
- homeTypes: HomeType[];
+ serviceCategories: ServiceCategory[];
  serviceItemCategories: ServiceItemCategory[];
 }) {
  const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
@@ -979,13 +979,13 @@ export default function Orders({
  <h1 className="text-2xl font-bold font-heading text-foreground">Orders</h1>
  <p className="text-sm text-muted-foreground mt-1">{bookings.length} booking{bookings.length === 1 ? '' : 's'}{hasActiveFilters ? ' matching filters' : ' total'}</p>
  </div>
- <NewBookingDialog homeTypes={homeTypes} serviceItemCategories={serviceItemCategories}/>
+ <NewBookingDialog serviceCategories={serviceCategories} serviceItemCategories={serviceItemCategories}/>
  </div>
 
  <EditBookingDialog
  booking={editingBooking}
  onClose={() => setEditingBooking(null)}
- homeTypes={homeTypes}
+ serviceCategories={serviceCategories}
  serviceItemCategories={serviceItemCategories}
  />
 
@@ -1067,7 +1067,7 @@ export default function Orders({
 
  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
  <span>{formatScheduled(booking.scheduled_at)}</span>
- <span>{booking.home_type?.label ?? '—'} · {booking.items_count} item{booking.items_count === 1 ? '' : 's'}</span>
+ <span>{booking.service_category?.label ?? '—'} · {booking.items_count} item{booking.items_count === 1 ? '' : 's'}</span>
  <span className="flex items-center gap-1">
  {booking.payment_method === 'etransfer' ? <Landmark className="w-3.5 h-3.5"/> : <Banknote className="w-3.5 h-3.5"/>}
  {booking.payment_method === 'etransfer' ? 'E-transfer' : 'Cash'}
@@ -1174,7 +1174,7 @@ export default function Orders({
  {booking.customer?.phone && <div className="text-xs text-muted-foreground">{booking.customer.phone}</div>}
  </td>
  <td className="px-4 py-3 whitespace-nowrap text-foreground">
- {booking.home_type?.label ?? '—'}
+ {booking.service_category?.label ?? '—'}
  <span className="text-muted-foreground"> · {booking.items_count} item{booking.items_count === 1 ? '' : 's'}</span>
  </td>
  <td className="px-4 py-3 whitespace-nowrap text-foreground">{formatScheduled(booking.scheduled_at)}</td>

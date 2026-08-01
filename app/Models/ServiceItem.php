@@ -9,10 +9,11 @@ class ServiceItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['provider_id', 'name', 'price', 'category', 'home_type_id', 'is_active'];
+    protected $fillable = ['provider_id', 'name', 'price', 'category', 'service_category_id', 'is_active', 'duration_hours'];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'duration_hours' => 'integer',
     ];
 
     public function provider()
@@ -20,8 +21,8 @@ class ServiceItem extends Model
         return $this->belongsTo(Provider::class);
     }
 
-    public function homeType()
+    public function serviceCategory()
     {
-        return $this->belongsTo(HomeType::class);
+        return $this->belongsTo(ServiceCategory::class);
     }
 }
