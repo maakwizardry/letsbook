@@ -64,6 +64,7 @@ const faqCategories: { category: string; icon: LucideIcon; items: Faq[] }[] = [
  'Under "Brand color," click any of the five color swatches to pick your theme — it saves instantly, no separate save button.',
  ],
  note: 'Your brand color is used throughout your booking page and QR code, so customers always see it in your colors.',
+ screenshot: { image: '/images/business-settings.jpeg', width: 1400, height: 1000, alt: 'Business settings page showing business name and brand color options', url: 'letsbook.app/settings/business' },
  },
  ],
  },
