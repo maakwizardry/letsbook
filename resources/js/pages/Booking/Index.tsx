@@ -71,9 +71,10 @@ interface WizardCopy {
  statsLabel: string;
 }
 
-// The exact wording every real provider sees today — never change these
-// without checking every existing cleaning customer is fine with it.
-const CLEANING_COPY: WizardCopy = {
+// business_type='regular' (was 'cleaning') — the exact wording every real
+// provider sees today. Never change these without checking every existing
+// cleaning customer is fine with it.
+const REGULAR_COPY: WizardCopy = {
  stepTitle: 'Select Home Type',
  heading: 'Select your home type',
  subtext: 'Pricing and services are tailored to your property size.',
@@ -129,7 +130,7 @@ const NICHE_COPY: Record<string, WizardCopy> = {
 };
 
 function resolveWizardCopy(businessType: string | null | undefined, businessNiche: string | null | undefined): WizardCopy {
- if (businessType !== 'appointment') return CLEANING_COPY;
+ if (businessType !== 'appointment') return REGULAR_COPY;
  if (businessNiche && NICHE_COPY[businessNiche]) return NICHE_COPY[businessNiche];
  return GENERIC_APPOINTMENT_COPY;
 }
@@ -175,10 +176,11 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // Wizard intro state
  const [wizardStarted, setWizardStarted] = useState(false);
 
- // Cleaning happens at the customer's home, so we collect an address;
- // an appointment-type business (barber, dentist, etc.) is visited at
- // the business itself, so that whole step doesn't apply. Every real
- // provider today defaults to 'cleaning', so this is unchanged for them.
+ // A 'regular' business (cleaning, and any other mobile service) visits
+ // the customer, so we collect an address; an 'appointment' business
+ // (barber, dentist, etc.) is visited at the business itself, so that
+ // whole step doesn't apply. Every real provider today defaults to
+ // 'regular', so this is unchanged for them.
  const isAppointmentType = provider.business_type === 'appointment';
  const wizardCopy = useMemo(
  () => resolveWizardCopy(provider.business_type, provider.business_niche),

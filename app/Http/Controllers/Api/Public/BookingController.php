@@ -26,11 +26,12 @@ class BookingController extends Controller
         $providerId = $serviceCategory->provider_id;
         $provider = $serviceCategory->provider;
 
-        // A cleaning job happens at the customer's home, so the address is
-        // required; an appointment-type business (barber, dentist, etc.) is
-        // visited at the business itself, so it isn't. Every provider today
-        // defaults to 'cleaning', so this is required for 100% of current
-        // traffic — identical to before this check existed.
+        // A 'regular' business (cleaning, and any other mobile service)
+        // visits the customer, so the address is required; an
+        // 'appointment' business (barber, dentist, etc.) is visited at the
+        // business itself, so it isn't. Every provider today defaults to
+        // 'regular', so this is required for 100% of current traffic —
+        // identical to before this check existed.
         $requiresAddress = $provider->business_type !== Provider::BUSINESS_TYPE_APPOINTMENT;
 
         $validated = $request->validate([
