@@ -40,5 +40,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewPageVisits', function (?Provider $user) {
             return $user?->email === 'fury+provider@yopmail.com';
         });
+
+        // Same restriction for /admin/clients (real-client activity report)
+        // — admin-only, not shown to any provider.
+        Gate::define('viewClients', function (?Provider $user) {
+            return $user?->email === 'fury+provider@yopmail.com';
+        });
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\PageVisitController;
 use App\Http\Controllers\BookingWizardController;
 use App\Http\Controllers\HelpController;
@@ -46,6 +47,10 @@ Route::get('/business/{slug}', [BookingWizardController::class, 'show'])->name('
 Route::get('/admin/visits', [PageVisitController::class, 'index'])
     ->middleware(['auth', 'can:viewPageVisits'])
     ->name('admin.visits');
+
+Route::get('/admin/clients', [ClientController::class, 'index'])
+    ->middleware(['auth', 'can:viewClients'])
+    ->name('admin.clients');
 
 Route::get('/help', [HelpController::class, 'index'])->name('help');
 
