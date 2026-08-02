@@ -109,7 +109,7 @@
 </head>
 <body>
     <div class="card">
-        <h1>Create Provider <span id="session-counter" style="font-size:12px; font-weight:400; color:#7dd3fc; margin-left:8px;">0 created this session</span></h1>
+        <h1>Create Provider <span id="niche-badge" style="font-size:12px; font-weight:600; color:#0f172a; background:#7dd3fc; border-radius:999px; padding:2px 10px; margin-left:8px;"></span> <span id="session-counter" style="font-size:12px; font-weight:400; color:#7dd3fc; margin-left:8px;">0 created this session</span></h1>
         <div id="status" class="status">Click "New Provider" and enter a business name.</div>
         <div id="variants"></div>
         <div class="actions">
@@ -122,8 +122,16 @@
         const variantsEl = document.getElementById('variants');
         const newBtn = document.getElementById('new-btn');
         const sessionCounterEl = document.getElementById('session-counter');
+        const nicheBadgeEl = document.getElementById('niche-badge');
 
-        const NICHE_MAP = { '0': 'cleaning', '1': 'barber', '2': 'dentist' };
+        const KNOWN_NICHES = ['cleaning', 'barber', 'dentist'];
+
+        // Which niche this page creates is set by the URL, not asked per
+        // provider — e.g. /create-provider/secret?business=barber. Falls
+        // back to 'cleaning' if missing or not one of the known niches.
+        const requestedNiche = new URLSearchParams(window.location.search).get('business');
+        const niche = KNOWN_NICHES.includes(requestedNiche) ? requestedNiche : 'cleaning';
+        nicheBadgeEl.textContent = niche;
 
         let sessionCreatedCount = 0;
 
@@ -230,12 +238,6 @@
 
             const coverImageUrlInput = window.prompt('Cover image URL (optional, leave blank to skip):');
             const coverImageUrl = coverImageUrlInput ? coverImageUrlInput.trim() : '';
-
-            const nicheInput = window.prompt('Business type — 0 = cleaning, 1 = barber, 2 = dentist:', '0');
-            if (nicheInput === null) {
-                return;
-            }
-            const niche = NICHE_MAP[nicheInput.trim()] ?? 'cleaning';
 
             setStatus(`Creating "${trimmed}"...`);
             variantsEl.innerHTML = '';
