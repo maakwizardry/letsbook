@@ -13,6 +13,10 @@ interface Client {
  bookings_count: number;
  recurring_bookings_count: number;
  total_revenue: number;
+ total_cash: number;
+ total_etransfer: number;
+ total_paid: number;
+ total_upcoming: number;
  last_activity: string | null;
 }
 
@@ -58,6 +62,10 @@ export default function Clients({ clients }: { clients: Client[] }) {
  <th className="px-4 py-3 whitespace-nowrap text-right">Bookings</th>
  <th className="px-4 py-3 whitespace-nowrap text-right">Recurring</th>
  <th className="px-4 py-3 whitespace-nowrap text-right">Revenue</th>
+ <th className="px-4 py-3 whitespace-nowrap text-right">Cash</th>
+ <th className="px-4 py-3 whitespace-nowrap text-right">E-transfer</th>
+ <th className="px-4 py-3 whitespace-nowrap text-right">Paid</th>
+ <th className="px-4 py-3 whitespace-nowrap text-right">Upcoming to earn</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-border">
@@ -74,11 +82,15 @@ export default function Clients({ clients }: { clients: Client[] }) {
  <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-foreground">{client.bookings_count}</td>
  <td className="px-4 py-3 whitespace-nowrap text-right text-muted-foreground">{client.recurring_bookings_count}</td>
  <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-foreground">{formatCurrency(client.total_revenue)}</td>
+ <td className="px-4 py-3 whitespace-nowrap text-right text-muted-foreground">{formatCurrency(client.total_cash)}</td>
+ <td className="px-4 py-3 whitespace-nowrap text-right text-muted-foreground">{formatCurrency(client.total_etransfer)}</td>
+ <td className="px-4 py-3 whitespace-nowrap text-right text-muted-foreground">{formatCurrency(client.total_paid)}</td>
+ <td className="px-4 py-3 whitespace-nowrap text-right text-muted-foreground">{formatCurrency(client.total_upcoming)}</td>
  </tr>
  ))}
  {clients.length === 0 && (
  <tr>
- <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+ <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
  No clients marked yet — set Provider::is_client to flag one.
  </td>
  </tr>
