@@ -25,8 +25,14 @@ class ProviderOnboardingService
      * unreachable, not an image, blocked host, etc.) never blocks provider
      * creation; cover_image_path just stays null and the booking page
      * falls back to its existing default cover image.
+     *
+     * $niche picks both the pilot's actual business_type/business_niche
+     * (so the wizard behaves and reads correctly for them) and the starter
+     * catalog seeded onto the new provider — 'cleaning' is a regular
+     * (address-collecting) business, anything else is an appointment-type
+     * one. Defaults to 'cleaning' so every existing caller is unaffected.
      */
-    public function create(string $name, ?string $externalUrl = null, ?string $coverImageUrl = null): array
+    public function create(string $name, ?string $externalUrl = null, ?string $coverImageUrl = null, string $niche = Provider::NICHE_CLEANING): array
     {
         $slug = Str::slug($name) ?: Str::random(8);
         $uniqueSlug = $slug;
@@ -42,7 +48,16 @@ class ProviderOnboardingService
             'external_url' => $externalUrl,
         ]);
 
-        $provider->seedDefaultCatalog();
+        $businessType = $niche === Provider::NICHE_CLEANING
+            ? Provider::BUSINESS_TYPE_REGULAR
+            : Provider::BUSINESS_TYPE_APPOINTMENT;
+
+        $provider->forceFill([
+            'business_type' => $businessType,
+            'business_niche' => $niche,
+        ])->save();
+
+        $provider->seedDefaultCatalog($niche);
 
         if ($coverImageUrl) {
             $path = $this->imageDownloader->download($coverImageUrl, 'covers');
@@ -137,7 +152,12 @@ class ProviderOnboardingService
      */
     public function messagesFor(Provider $provider): array
     {
-        return $this->outreachMessages($provider->name, route('provider.booking', $provider->slug));
+        return $this->outreachMessages(
+            $provider->name,
+            route('provider.booking', $provider->slug),
+            $provider->business_niche,
+            $provider->business_type,
+        );
     }
 
     /**
@@ -158,20 +178,45 @@ class ProviderOnboardingService
      * Every variant links the live demo page — seeing their own business
      * on a real page is the strongest hook.
      *
+     * $niche/$businessType tailor the wording so it doesn't lie about the
+     * pilot: which industry noun to use, and whether to mention collecting
+     * an address (only true for a 'regular'/address-collecting business —
+     * an appointment-type pilot's customers never see that step). Both
+     * default to the cleaning wording every existing caller relied on.
+     *
      * Each entry is ['label' => ..., 'message' => ...].
      */
-    protected function outreachMessages(string $name, string $url): array
+    protected function outreachMessages(string $name, string $url, ?string $niche = null, ?string $businessType = null): array
     {
         $greetingName = Str::before($name, ' ');
 
+        $nounSingular = match ($niche) {
+            Provider::NICHE_BARBER => 'barbershop',
+            Provider::NICHE_DENTIST => 'dental practice',
+            default => 'cleaning business',
+        };
+        $nounPlural = match ($niche) {
+            Provider::NICHE_BARBER => 'barbershops',
+            Provider::NICHE_DENTIST => 'dental practices',
+            default => 'cleaning businesses',
+        };
+
+        $collectsAddress = $businessType !== Provider::BUSINESS_TYPE_APPOINTMENT;
+        $detailsPhrase = $collectsAddress
+            ? 'pick a service, add their address, and choose a time'
+            : 'pick a service and choose a time';
+        $frictionPhrase = $collectsAddress
+            ? 'prices, availability, and addresses'
+            : 'prices, availability, and scheduling';
+
         $warmIntro = <<<MSG
-        Hey {$greetingName}! I came across your cleaning business and had an idea I wanted to share with you.
+        Hey {$greetingName}! I came across your {$nounSingular} and had an idea I wanted to share with you.
 
         I know handling bookings through Facebook messages and texts can get messy — customers asking about prices, availability, what time works. So I put together a booking page for your business, just so you can see what it could look like:
 
         {$url}
 
-        Customers can pick a service, add their address, and choose a time that suits you — all the details in one place instead of scattered across chats.
+        Customers can {$detailsPhrase} that suits you — all the details in one place instead of scattered across chats.
 
         No pressure at all — I'd just love to hear what you think!
         MSG;
@@ -179,7 +224,7 @@ class ProviderOnboardingService
         $conversationStarter = <<<MSG
         Hey {$greetingName}! Hope business is going well. Quick question — how are you handling bookings at the moment? Mostly through Facebook messages and texts?
 
-        I've been talking with a few cleaning businesses lately, and the back-and-forth about prices, availability, and addresses keeps coming up as the most annoying part of the job.
+        I've been talking with a few {$nounPlural} lately, and the back-and-forth about {$frictionPhrase} keeps coming up as the most annoying part of the job.
 
         I actually put together a booking page for your business where customers fill in all of that themselves and just pick a time — here it is if you'd like a look:
 
@@ -189,11 +234,11 @@ class ProviderOnboardingService
         MSG;
 
         $openBook = <<<MSG
-        Hey {$greetingName}! I make simple booking pages for cleaning businesses, and I went ahead and made one for yours so you could see it for real instead of me just describing it:
+        Hey {$greetingName}! I make simple booking pages for {$nounPlural}, and I went ahead and made one for yours so you could see it for real instead of me just describing it:
 
         {$url}
 
-        Customers pick a service, add their address, and choose a time that works for you — no more chasing details over messages.
+        Customers {$detailsPhrase} that works for you — no more chasing details over messages.
 
         And just so you have the full picture: if you find it useful, it's a one-time \$99 to keep — no subscriptions or monthly fees, I'm not a fan of those either. If it's not for you, no worries at all.
 

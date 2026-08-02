@@ -123,6 +123,8 @@
         const newBtn = document.getElementById('new-btn');
         const sessionCounterEl = document.getElementById('session-counter');
 
+        const NICHE_MAP = { '0': 'cleaning', '1': 'barber', '2': 'dentist' };
+
         let sessionCreatedCount = 0;
 
         function incrementSessionCounter() {
@@ -229,6 +231,12 @@
             const coverImageUrlInput = window.prompt('Cover image URL (optional, leave blank to skip):');
             const coverImageUrl = coverImageUrlInput ? coverImageUrlInput.trim() : '';
 
+            const nicheInput = window.prompt('Business type — 0 = cleaning, 1 = barber, 2 = dentist:', '0');
+            if (nicheInput === null) {
+                return;
+            }
+            const niche = NICHE_MAP[nicheInput.trim()] ?? 'cleaning';
+
             setStatus(`Creating "${trimmed}"...`);
             variantsEl.innerHTML = '';
 
@@ -242,6 +250,7 @@
                     body: JSON.stringify({
                         name: trimmed,
                         cover_image_url: coverImageUrl || null,
+                        niche,
                     }),
                 });
 

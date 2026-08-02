@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Provider;
 use App\Services\ProviderOnboardingService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CreateProviderController extends Controller
 {
@@ -13,6 +15,7 @@ class CreateProviderController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'cover_image_url' => 'nullable|url|max:2048',
+            'niche' => ['nullable', 'string', Rule::in(Provider::KNOWN_NICHES)],
         ]);
 
         if ($existing = $onboarding->findByName($validated['name'])) {
@@ -27,7 +30,12 @@ class CreateProviderController extends Controller
             ], 409);
         }
 
-        $result = $onboarding->create($validated['name'], null, $validated['cover_image_url'] ?? null);
+        $result = $onboarding->create(
+            $validated['name'],
+            null,
+            $validated['cover_image_url'] ?? null,
+            $validated['niche'] ?? Provider::NICHE_CLEANING,
+        );
 
         return response()->json([
             'provider' => $result['provider'],
