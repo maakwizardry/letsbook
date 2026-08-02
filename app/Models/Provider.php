@@ -126,8 +126,27 @@ class Provider extends Authenticatable
     /**
      * Give a freshly registered provider a starter catalog so their booking
      * page isn't empty before they've had a chance to configure it.
+     *
+     * $niche picks the catalog independently of whatever this provider's
+     * own business_niche column currently holds — so a pilot can be seeded
+     * correctly regardless of when its niche gets saved to the database.
+     * null (every real signup today — the field isn't mass-assignable, so
+     * a fresh registration never has one to pass) or any niche without its
+     * own catalog below seeds the same catalog every real provider gets
+     * today.
      */
-    public function seedDefaultCatalog(): void
+    public function seedDefaultCatalog(?string $niche = null): void
+    {
+        match ($niche) {
+            self::NICHE_BARBER => $this->seedBarberCatalog(),
+            self::NICHE_DENTIST => $this->seedDentistCatalog(),
+            default => $this->seedCleaningCatalog(),
+        };
+
+        $this->seedDefaultAvailability();
+    }
+
+    private function seedCleaningCatalog(): void
     {
         $serviceCategories = [
             '1 Bedroom Apartment' => ['standard' => 100, 'deep' => 150],
@@ -166,8 +185,48 @@ class Provider extends Authenticatable
             'category' => 'Add-ons',
             'service_category_id' => null,
         ]);
+    }
 
-        $this->seedDefaultAvailability();
+    private function seedBarberCatalog(): void
+    {
+        $category = $this->serviceCategories()->create(['label' => 'Barber Services']);
+
+        $items = [
+            'Haircut' => 30,
+            'Beard Trim' => 15,
+            'Haircut + Beard' => 40,
+            'Kids Haircut' => 20,
+        ];
+
+        foreach ($items as $name => $price) {
+            $this->serviceItems()->create([
+                'name' => $name,
+                'price' => $price,
+                'category' => 'Services',
+                'service_category_id' => $category->id,
+            ]);
+        }
+    }
+
+    private function seedDentistCatalog(): void
+    {
+        $category = $this->serviceCategories()->create(['label' => 'Dental Services']);
+
+        $items = [
+            'Check-up & Cleaning' => 120,
+            'Consultation' => 50,
+            'Filling' => 180,
+            'Teeth Whitening' => 250,
+        ];
+
+        foreach ($items as $name => $price) {
+            $this->serviceItems()->create([
+                'name' => $name,
+                'price' => $price,
+                'category' => 'Services',
+                'service_category_id' => $category->id,
+            ]);
+        }
     }
 
     /**
