@@ -71,24 +71,11 @@ interface WizardCopy {
  statsLabel: string;
 }
 
-// business_type='regular' (was 'cleaning') — the exact wording every real
-// provider sees today. Never change these without checking every existing
-// cleaning customer is fine with it.
-const REGULAR_COPY: WizardCopy = {
- stepTitle: 'Select Home Type',
- heading: 'Select your home type',
- subtext: 'Pricing and services are tailored to your property size.',
- introText: 'Pick your home type, choose your services, and grab a time that works — takes about 2 minutes.',
- calendarPrefix: 'Cleaning',
- receiptLabel: 'Home Cleaning Service',
- servicesHeading: 'Add Services',
- servicesSubtext: 'Customize your cleaning package.',
- statsLabel: 'Homes Cleaned',
-};
-
-// Used for business_type=appointment when business_niche is unset, or set
-// to a niche that doesn't have its own entry in NICHE_COPY below yet.
-const GENERIC_APPOINTMENT_COPY: WizardCopy = {
+// Fallback for any provider with no business_niche set, or one that
+// doesn't have its own entry in NICHE_COPY below yet. Deliberately
+// generic/type-agnostic — it says nothing that would be wrong for either
+// a mobile service or an in-person one.
+const GENERIC_COPY: WizardCopy = {
  stepTitle: 'Select a Service',
  heading: 'Select a service',
  subtext: "Choose the option that fits what you need.",
@@ -100,11 +87,26 @@ const GENERIC_APPOINTMENT_COPY: WizardCopy = {
  statsLabel: 'Appointments Completed',
 };
 
-// Keyed by Provider::business_niche (see app/Models/Provider.php). Add an
-// entry here whenever a niche needs wording beyond the generic appointment
-// copy above — nothing else needs to change for a new niche to work, it
-// just uses the generic copy until it gets an entry.
+// Keyed by Provider::business_niche (see app/Models/Provider.php) — copy
+// comes purely from business_niche, business_type has no say in wording
+// (it only controls whether the address step appears). Add an entry here
+// whenever a niche needs wording beyond GENERIC_COPY above — nothing else
+// needs to change for a new niche to work, it just uses the generic copy
+// until it gets an entry. 'cleaning' is the exact wording every real
+// provider sees today — never change it without checking every existing
+// cleaning customer is fine with it.
 const NICHE_COPY: Record<string, WizardCopy> = {
+ cleaning: {
+ stepTitle: 'Select Home Type',
+ heading: 'Select your home type',
+ subtext: 'Pricing and services are tailored to your property size.',
+ introText: 'Pick your home type, choose your services, and grab a time that works — takes about 2 minutes.',
+ calendarPrefix: 'Cleaning',
+ receiptLabel: 'Home Cleaning Service',
+ servicesHeading: 'Add Services',
+ servicesSubtext: 'Customize your cleaning package.',
+ statsLabel: 'Homes Cleaned',
+ },
  barber: {
  stepTitle: 'Select a Service',
  heading: 'Select a service',
@@ -129,10 +131,9 @@ const NICHE_COPY: Record<string, WizardCopy> = {
  },
 };
 
-function resolveWizardCopy(businessType: string | null | undefined, businessNiche: string | null | undefined): WizardCopy {
- if (businessType !== 'appointment') return REGULAR_COPY;
+function resolveWizardCopy(businessNiche: string | null | undefined): WizardCopy {
  if (businessNiche && NICHE_COPY[businessNiche]) return NICHE_COPY[businessNiche];
- return GENERIC_APPOINTMENT_COPY;
+ return GENERIC_COPY;
 }
 
 export default function BookingWizard({ provider, availability = [], blockedDates = [], staff = [] }: { provider: any; availability?: { day_of_week: number; start_time: string; end_time: string }[]; blockedDates?: string[]; staff?: { id: number; name: string }[] }) {
@@ -182,9 +183,11 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  // whole step doesn't apply. Every real provider today defaults to
  // 'regular', so this is unchanged for them.
  const isAppointmentType = provider.business_type === 'appointment';
+ // Wording comes purely from business_niche — business_type has no say
+ // in it, it only governs the address step via isAppointmentType above.
  const wizardCopy = useMemo(
- () => resolveWizardCopy(provider.business_type, provider.business_niche),
- [provider.business_type, provider.business_niche],
+ () => resolveWizardCopy(provider.business_niche),
+ [provider.business_niche],
  );
 
  // Both layers: the semantic var itself, and Tailwind's `--color-*` theme

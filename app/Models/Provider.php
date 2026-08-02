@@ -31,17 +31,22 @@ class Provider extends Authenticatable
     ];
 
     /**
-     * business_niche is freeform (not a DB enum) — these constants are just
+     * business_niche controls wizard *wording*, full stop — business_type
+     * has no say in it. Freeform (not a DB enum); these constants are just
      * named references for niches that have their own tailored wizard copy
      * (see resources/js/pages/Booking/Index.tsx). Setting business_niche to
-     * a value not listed here is fine; it falls back to generic
-     * business_type-based copy until it's given its own entry.
+     * a value not listed here is fine; it falls back to generic copy until
+     * it's given its own entry. Defaults to 'cleaning' at the DB level
+     * since that's every existing provider's actual business today.
      */
+    public const NICHE_CLEANING = 'cleaning';
+
     public const NICHE_BARBER = 'barber';
 
     public const NICHE_DENTIST = 'dentist';
 
     public const KNOWN_NICHES = [
+        self::NICHE_CLEANING,
         self::NICHE_BARBER,
         self::NICHE_DENTIST,
     ];
