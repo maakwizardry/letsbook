@@ -55,6 +55,16 @@ const faqCategories: { category: string; icon: LucideIcon; items: Faq[] }[] = [
  ],
  note: 'Anyone who scans it goes straight to your booking page — no typing a URL, no searching for you online.',
  },
+ {
+ question: 'How do I change my business name or brand color?',
+ steps: [
+ 'Click your name in the bottom-left of the sidebar, then "Settings."',
+ 'Click "Business" in the settings menu on the left.',
+ 'Under "Business name," update the name and click "Save" — this is what customers see on your booking page.',
+ 'Under "Brand color," click any of the five color swatches to pick your theme — it saves instantly, no separate save button.',
+ ],
+ note: 'Your brand color is used throughout your booking page and QR code, so customers always see it in your colors.',
+ },
  ],
  },
  {
