@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ProviderResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -87,6 +88,15 @@ class Provider extends Authenticatable
             'uses_staff_scheduling' => 'boolean',
             'is_client' => 'boolean',
         ];
+    }
+
+    /**
+     * Overrides CanResetPassword's default so the email actually gets
+     * delivered — see ProviderResetPasswordNotification for why.
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new ProviderResetPasswordNotification($token));
     }
 
     public function serviceCategories()
