@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PageVisit;
 use App\Models\Provider;
 use App\Models\Staff;
 use Illuminate\Http\Request;
@@ -10,9 +11,23 @@ use Inertia\Inertia;
 
 class BookingWizardController extends Controller
 {
+    /**
+     * Case-insensitive substrings that flag a request as an automated
+     * crawler rather than a real visitor — deliberately conservative
+     * (search-engine/SEO bots only), so a link-preview bot from a
+     * messaging app (which still signals a real person shared the link)
+     * isn't filtered out.
+     */
+    private const BOT_USER_AGENT_MARKERS = [
+        'bot', 'spider', 'crawl', 'slurp', 'ahrefs', 'semrush', 'mj12bot',
+        'dotbot', 'petalbot', 'bytespider', 'yandex', 'baiduspider',
+    ];
+
     public function show(Request $request, $slug)
     {
         $provider = Provider::where('slug', $slug)->firstOrFail();
+
+        $this->logVisit($request, $provider);
 
         $completedCleanings = $provider->bookings()->count();
 
@@ -86,5 +101,47 @@ class BookingWizardController extends Controller
                 'has_satisfaction_guarantee' => $provider->has_satisfaction_guarantee,
             ]
         ]);
+    }
+
+    /**
+     * Records one row per real page load. Skips Inertia partial reloads
+     * (the staff-picker's ?staff_id= refetch hits this same action, but
+     * that's the same visitor switching an option, not a new visit) and
+     * requests from an obvious crawler.
+     */
+    private function logVisit(Request $request, Provider $provider): void
+    {
+        if ($request->header('X-Inertia')) {
+            return;
+        }
+
+        if ($this->isLikelyBot($request->userAgent())) {
+            return;
+        }
+
+        PageVisit::create([
+            'provider_id' => $provider->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'referrer' => $request->header('referer'),
+            'visited_at' => now(),
+        ]);
+    }
+
+    private function isLikelyBot(?string $userAgent): bool
+    {
+        if (! $userAgent) {
+            return false;
+        }
+
+        $userAgent = strtolower($userAgent);
+
+        foreach (self::BOT_USER_AGENT_MARKERS as $marker) {
+            if (str_contains($userAgent, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
