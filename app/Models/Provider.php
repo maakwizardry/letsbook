@@ -85,6 +85,7 @@ class Provider extends Authenticatable
             'invitation_token' => 'hashed',
             'notifications_enabled' => 'boolean',
             'uses_staff_scheduling' => 'boolean',
+            'is_client' => 'boolean',
         ];
     }
 
