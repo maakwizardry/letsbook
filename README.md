@@ -20,18 +20,19 @@ appointment-style businesses (barbers, dentists, and similar) as **one app**,
 not a fork — behavior is driven by three flags on `Provider`:
 
 - **`business_type`**: `regular` (default) or `appointment`. Controls
-  *where the work happens*. `regular` collects a customer address in the
-  public wizard, since the provider travels to the customer — cleaning is
-  the only `regular` niche today, but any other mobile service would be
-  `regular` too. `appointment` skips the address step entirely, since the
-  customer visits the provider.
-- **`business_niche`**: freeform string, `null` by default. Controls
-  *wording*, not behavior — `barber` and `dentist` both need
-  `business_type=appointment`, but "Select a treatment" and "Select a
-  service" read very differently. A niche without its own tailored copy
-  falls back to generic wording for its `business_type`, so setting a new
-  niche never requires a migration — only an optional follow-up to give it
-  dedicated copy.
+  *behavior only* — specifically, whether the public wizard collects a
+  customer address. `regular` means the provider travels to the customer
+  (cleaning, or any other mobile service). `appointment` means the
+  customer visits the provider (barber, dentist, etc.). It has no say in
+  wording — that's `business_niche`'s job, entirely.
+- **`business_niche`**: freeform string, defaults to `'cleaning'`.
+  Controls *wording only* — completely independent of `business_type`.
+  `barber` and `dentist` read very differently ("Select a treatment" vs.
+  "Select a service"), and wording is resolved purely by niche, with no
+  fallback to `business_type`-based copy. A niche without its own
+  tailored entry falls back to generic, business-agnostic wording — so
+  setting a brand-new niche never requires a migration, only an optional
+  follow-up to give it dedicated copy.
 - **`uses_staff_scheduling`**: boolean, `false` by default. Controls
   *whether there's more than one interchangeable person doing the work*.
   When on, a provider can add staff members, give each one their own hours
@@ -41,8 +42,8 @@ not a fork — behavior is driven by three flags on `Provider`:
   business, and none of the staff UI is reachable.
 
 `business_type` × `uses_staff_scheduling` combine into four supported
-business shapes; `business_niche` further tailors wording within the
-`appointment` shapes:
+business shapes; `business_niche` independently tailors wording for any
+of them (most usefully for `appointment` providers):
 
 | `business_type` | `uses_staff_scheduling` | Shape | Example |
 |---|---|---|---|
@@ -61,9 +62,9 @@ business shapes; `business_niche` further tailors wording within the
   unaffected while the other shapes are piloted by hand.
 - The public wizard's main touchpoints (category step, services step,
   intro copy, calendar event title, confirmation receipt) are
-  `business_type`/`business_niche`-aware. The provider dashboard
-  (`services`, `orders`, `help`) still says "Home Type" regardless of
-  either flag — planned as its own separate release.
+  `business_niche`-aware; the address step is `business_type`-aware. The
+  provider dashboard (`services`, `orders`, `help`) still says "Home
+  Type" regardless of either flag — planned as its own separate release.
 - No self-serve onboarding flow exists yet for the non-default shapes —
   enabling them for a new provider is a manual, hand-held step.
 
