@@ -20,12 +20,6 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-// Draft landing-page copy rewrite, for review only — not linked anywhere,
-// noindex'd, no auth gate (nothing sensitive, just marketing copy).
-Route::get('/preview', function () {
-    return Inertia::render('preview');
-});
-
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('orders', [OrderController::class, 'index'])->name('orders');
