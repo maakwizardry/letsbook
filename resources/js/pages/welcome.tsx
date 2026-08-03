@@ -352,7 +352,7 @@ function EmailStory() {
 const SITE_URL = 'https://letsbook.maakhq.com';
 const PAGE_TITLE = 'LetsBook — Online Booking Software for Home Cleaning Businesses';
 const PAGE_DESCRIPTION =
- 'Give your home cleaning business a booking page customers love. Automated scheduling, reminders, and one dashboard for every job — $449 one-time, no monthly fees.';
+ 'Give your home cleaning business a booking page customers love. Automated scheduling, reminders, and one dashboard for every job — $199 one-time, no monthly fees.';
 const OG_IMAGE = `${SITE_URL}/images/og-image.jpg`;
 
 const STRUCTURED_DATA = {
@@ -366,7 +366,7 @@ const STRUCTURED_DATA = {
  image: OG_IMAGE,
  offers: {
  '@type': 'Offer',
- price: '449',
+ price: '199',
  priceCurrency: 'USD',
  },
 };
@@ -558,7 +558,7 @@ export default function Welcome() {
  href={route('register')}
  className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 hover:opacity-90 active:scale-95 transition-all"
  >
- Get Yours Now — $449 Lifetime
+ Get Yours Now — $199 Lifetime
  <ArrowRight className="w-4 h-4"/>
  </Link>
  <a
@@ -680,7 +680,7 @@ export default function Welcome() {
  </div>
  <div className="flex items-end justify-center gap-1 mb-1">
  <span className="text-2xl font-black font-heading text-foreground self-start mt-2">$</span>
- <span className="text-6xl font-black font-heading text-foreground">449</span>
+ <span className="text-6xl font-black font-heading text-foreground">199</span>
  </div>
  <p className="text-muted-foreground font-medium mb-8">one-time payment · lifetime access</p>
 
