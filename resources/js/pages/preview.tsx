@@ -552,36 +552,75 @@ function OldWayNewWaySection() {
  );
 }
 
+// Working days/month (not calendar days — matches a business that's closed
+// some days) and an hourly value assumption. Both stated in the disclaimer
+// so the numbers below the slider are never a mystery.
+const ROI_WORKING_DAYS_PER_MONTH = 24;
+const ROI_HOURLY_RATE = 30;
+const ROI_MIN_MINUTES = 15;
+const ROI_MAX_MINUTES = 180;
+const ROI_DEFAULT_MINUTES = 45;
+
+function formatRoiCurrency(amount: number) {
+ return `$${Math.round(amount).toLocaleString('en-US')}`;
+}
+
 function RoiSection() {
+ const [minutesPerDay, setMinutesPerDay] = useState(ROI_DEFAULT_MINUTES);
+
+ const hoursPerMonth = (minutesPerDay * ROI_WORKING_DAYS_PER_MONTH) / 60;
+ const costPerMonth = hoursPerMonth * ROI_HOURLY_RATE;
+ const costPerYear = costPerMonth * 12;
+
+ const sliderPercent = ((minutesPerDay - ROI_MIN_MINUTES) / (ROI_MAX_MINUTES - ROI_MIN_MINUTES)) * 100;
+
  return (
  <section className="max-w-4xl mx-auto px-5 py-16 lg:py-20">
  <div className="rounded-[2rem] border border-border bg-card shadow-sm p-8 sm:p-12">
  <div className="text-center mb-10">
  <h2 className="text-3xl font-black font-heading text-foreground mb-3">How much is booking admin costing you?</h2>
  <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
- If you're spending just 45 minutes a day answering booking messages, checking availability, collecting addresses, and updating your calendar, that's more than <span className="font-bold text-foreground">18 hours every month</span>.
- </p>
- <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed mt-2">
- That's time you could spend cleaning homes, managing your team, or getting more customers.
+ Drag the slider to how much time you actually spend each day answering booking messages, checking availability, collecting addresses, and updating your calendar.
  </p>
  </div>
 
- <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-8">
- <div className="rounded-2xl bg-muted/60 px-6 py-5 text-center min-w-[160px]">
+ <div className="max-w-md mx-auto mb-10">
+ <div className="flex items-center justify-between mb-3">
+ <span className="text-sm font-semibold text-muted-foreground">Time spent per day</span>
+ <span className="text-lg font-black font-heading text-primary">{minutesPerDay} min</span>
+ </div>
+ <input
+ type="range"
+ min={ROI_MIN_MINUTES}
+ max={ROI_MAX_MINUTES}
+ step={5}
+ value={minutesPerDay}
+ onChange={(e) => setMinutesPerDay(Number(e.target.value))}
+ className="roi-slider w-full"
+ style={{ '--roi-slider-fill': `${sliderPercent}%` } as React.CSSProperties}
+ aria-label="Minutes per day spent on booking admin"
+ />
+ <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
+ <span>{ROI_MIN_MINUTES} min</span>
+ <span>{ROI_MAX_MINUTES} min</span>
+ </div>
+ </div>
+
+ <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+ <div className="rounded-2xl bg-muted/60 px-3 py-5 text-center">
  <Timer className="w-5 h-5 text-muted-foreground mx-auto mb-2"/>
- <div className="text-2xl font-black font-heading text-foreground">45 min/day</div>
+ <div key={hoursPerMonth} className="anim-pop text-xl sm:text-2xl font-black font-heading text-foreground">{hoursPerMonth.toFixed(1)}</div>
+ <div className="text-xs text-muted-foreground mt-0.5">hours / month</div>
  </div>
- <ArrowRight className="hidden sm:block w-5 h-5 text-muted-foreground/40 shrink-0"/>
- <ArrowDown className="sm:hidden w-5 h-5 text-muted-foreground/40 shrink-0"/>
- <div className="rounded-2xl bg-muted/60 px-6 py-5 text-center min-w-[160px]">
+ <div className="rounded-2xl bg-muted/60 px-3 py-5 text-center">
  <ClipboardList className="w-5 h-5 text-muted-foreground mx-auto mb-2"/>
- <div className="text-2xl font-black font-heading text-foreground">~18 hours/month</div>
+ <div key={costPerMonth} className="anim-pop text-xl sm:text-2xl font-black font-heading text-foreground">{formatRoiCurrency(costPerMonth)}</div>
+ <div className="text-xs text-muted-foreground mt-0.5">per month</div>
  </div>
- <ArrowRight className="hidden sm:block w-5 h-5 text-muted-foreground/40 shrink-0"/>
- <ArrowDown className="sm:hidden w-5 h-5 text-muted-foreground/40 shrink-0"/>
- <div className="rounded-2xl bg-destructive/5 border border-destructive/15 px-6 py-5 text-center min-w-[160px]">
+ <div className="rounded-2xl bg-destructive/5 border border-destructive/15 px-3 py-5 text-center">
  <X className="w-5 h-5 text-destructive/70 mx-auto mb-2"/>
- <div className="text-lg font-black font-heading text-foreground">Gone to booking admin</div>
+ <div key={costPerYear} className="anim-pop text-xl sm:text-2xl font-black font-heading text-foreground">{formatRoiCurrency(costPerYear)}</div>
+ <div className="text-xs text-muted-foreground mt-0.5">per year</div>
  </div>
  </div>
 
@@ -589,7 +628,7 @@ function RoiSection() {
  LetsBook gives that work back to you by letting customers handle the booking themselves.
  </p>
  <p className="text-center text-xs text-muted-foreground italic">
- Illustrative example based on 45 minutes of booking administration per working day.
+ Illustrative example — assumes {ROI_WORKING_DAYS_PER_MONTH} working days per month and your time is worth ${ROI_HOURLY_RATE}/hour. Adjust the slider to match your own business.
  </p>
  </div>
  </section>
@@ -941,6 +980,36 @@ export default function Preview() {
  }
  @keyframes skeleton-sweep {
  100% { transform: translateX(100%); }
+ }
+ .roi-slider {
+ -webkit-appearance: none;
+ -moz-appearance: none;
+ appearance: none;
+ height: 8px;
+ border-radius: 9999px;
+ background: linear-gradient(to right, var(--primary) var(--roi-slider-fill, 0%), var(--border) var(--roi-slider-fill, 0%));
+ outline: none;
+ cursor: pointer;
+ }
+ .roi-slider::-webkit-slider-thumb {
+ -webkit-appearance: none;
+ appearance: none;
+ width: 22px;
+ height: 22px;
+ border-radius: 9999px;
+ background: var(--primary);
+ border: 3px solid var(--card);
+ box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+ cursor: pointer;
+ }
+ .roi-slider::-moz-range-thumb {
+ width: 22px;
+ height: 22px;
+ border-radius: 9999px;
+ background: var(--primary);
+ border: 3px solid var(--card);
+ box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+ cursor: pointer;
  }
  `}} />
  </>
