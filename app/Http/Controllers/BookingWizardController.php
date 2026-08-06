@@ -6,6 +6,7 @@ use App\Models\PageVisit;
 use App\Models\Provider;
 use App\Models\Staff;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -13,14 +14,17 @@ class BookingWizardController extends Controller
 {
     /**
      * Case-insensitive substrings that flag a request as an automated
-     * crawler rather than a real visitor — deliberately conservative
-     * (search-engine/SEO bots only), so a link-preview bot from a
-     * messaging app (which still signals a real person shared the link)
-     * isn't filtered out.
+     * crawler rather than a real visitor — covers search-engine/SEO bots
+     * plus link-preview fetchers from messaging/social apps (WhatsApp,
+     * Facebook, Telegram, Slack, Discord, Twitter/X, LinkedIn, Skype all
+     * hit the URL server-side to build a preview card; that's not a human
+     * viewing the page, so it shouldn't count as a visit even though the
+     * share itself is real).
      */
     private const BOT_USER_AGENT_MARKERS = [
         'bot', 'spider', 'crawl', 'slurp', 'ahrefs', 'semrush', 'mj12bot',
         'dotbot', 'petalbot', 'bytespider', 'yandex', 'baiduspider',
+        'whatsapp', 'facebookexternalhit', 'skypeuripreview',
     ];
 
     public function show(Request $request, $slug)
@@ -115,13 +119,24 @@ class BookingWizardController extends Controller
             return;
         }
 
+        // The admin clicking through from /admin/visits to a provider's
+        // live page (target="_blank") is a normal navigation to this same
+        // route — without this, it logs a visit that then shows up back in
+        // the report being reviewed.
+        if ($request->user() && Gate::forUser($request->user())->allows('viewPageVisits')) {
+            return;
+        }
+
         if ($this->isLikelyBot($request->userAgent())) {
             return;
         }
 
         PageVisit::create([
             'provider_id' => $provider->id,
-            'ip_address' => $request->ip(),
+            // nginx/Laravel don't trust Cloudflare as a proxy, so $request->ip()
+            // alone resolves to Cloudflare's own rotating edge IP rather than the
+            // visitor's — read the real address Cloudflare forwards instead.
+            'ip_address' => $request->header('CF-Connecting-IP') ?: $request->ip(),
             'user_agent' => $request->userAgent(),
             'referrer' => $request->header('referer'),
             'visited_at' => now(),
