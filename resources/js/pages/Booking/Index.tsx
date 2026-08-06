@@ -767,6 +767,7 @@ export default function BookingWizard({ provider, availability = [], blockedDate
  {qty > 0 && <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10 shrink-0"/>}
  <h3 className="font-bold text-foreground text-base">{item.name}</h3>
  </div>
+ {item.description && <p className="text-sm text-muted-foreground mb-1.5">{item.description}</p>}
  <div className="font-semibold text-foreground">${item.price}</div>
  </div>
 

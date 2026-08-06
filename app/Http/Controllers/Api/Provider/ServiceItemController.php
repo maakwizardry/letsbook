@@ -13,12 +13,13 @@ class ServiceItemController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:2000',
             'price' => 'required|numeric|min:0',
             'category' => 'nullable|string|max:255',
             'service_category_id' => 'nullable|exists:service_categories,id',
             'duration_hours' => 'nullable|integer|min:1|max:'.BookingCreator::MAX_DURATION_HOURS,
         ]);
-        
+
         if (!empty($validated['service_category_id'])) {
             $request->user()->serviceCategories()->findOrFail($validated['service_category_id']);
         }
@@ -35,6 +36,7 @@ class ServiceItemController extends Controller
         
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|nullable|string|max:2000',
             'price' => 'sometimes|numeric|min:0',
             'category' => 'nullable|string|max:255',
             'service_category_id' => 'nullable|exists:service_categories,id',

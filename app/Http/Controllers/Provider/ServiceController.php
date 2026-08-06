@@ -38,6 +38,7 @@ class ServiceController extends Controller
                 'items' => $group->map(fn (ServiceItem $item) => [
                     'id' => $item->id,
                     'name' => $item->name,
+                    'description' => $item->description,
                     'price' => (float) $item->price,
                     'service_category_label' => $item->serviceCategory?->label,
                     'service_category_id' => $item->service_category_id,
@@ -73,6 +74,7 @@ class ServiceController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
             'price' => ['required', 'numeric', 'min:0'],
             'category' => ['nullable', 'string', 'max:255'],
             'service_category_id' => ['nullable', Rule::exists('service_categories', 'id')->where('provider_id', $request->user()->id)],
@@ -90,6 +92,7 @@ class ServiceController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'price' => ['sometimes', 'required', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'required', 'boolean'],
             'duration_hours' => ['sometimes', 'required', 'integer', 'min:1', 'max:'.BookingCreator::MAX_DURATION_HOURS],

@@ -17,7 +17,7 @@ class ServiceItemController extends Controller
 
         $serviceCategory = ServiceCategory::findOrFail($request->service_category_id);
 
-        $items = ServiceItem::select('id', 'name', 'price', 'category', 'service_category_id')
+        $items = ServiceItem::select('id', 'name', 'description', 'price', 'category', 'service_category_id')
             ->where('provider_id', $serviceCategory->provider_id)
             ->where('is_active', true)
             ->where(function ($q) use ($request) {

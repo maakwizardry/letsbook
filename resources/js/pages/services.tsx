@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
@@ -14,6 +15,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 interface ServiceItemRow {
  id: number;
  name: string;
+ description: string | null;
  price: number;
  service_category_label: string | null;
  service_category_id: number | null;
@@ -37,12 +39,14 @@ function formatMoney(value: number) {
 function useServiceItemEditor(item: ServiceItemRow) {
  const [isEditing, setIsEditing] = useState(false);
  const [name, setName] = useState(item.name);
+ const [description, setDescription] = useState(item.description ?? '');
  const [price, setPrice] = useState(String(item.price));
  const [pending, setPending] = useState(false);
  const [error, setError] = useState('');
 
  const startEdit = () => {
  setName(item.name);
+ setDescription(item.description ?? '');
  setPrice(String(item.price));
  setError('');
  setIsEditing(true);
@@ -62,7 +66,7 @@ function useServiceItemEditor(item: ServiceItemRow) {
  setError('');
  router.patch(
  `/services/${item.id}`,
- { name: name.trim(), price: priceValue },
+ { name: name.trim(), description: description.trim() || null, price: priceValue },
  {
  preserveScroll: true,
  onSuccess: () => setIsEditing(false),
@@ -72,7 +76,7 @@ function useServiceItemEditor(item: ServiceItemRow) {
  );
  };
 
- return { isEditing, name, price, setName, setPrice, startEdit, cancelEdit, save, pending, error, canSave };
+ return { isEditing, name, description, price, setName, setDescription, setPrice, startEdit, cancelEdit, save, pending, error, canSave };
 }
 
 function useActiveToggle(item: ServiceItemRow) {
@@ -120,6 +124,7 @@ function NewServiceForm({
  onClose: () => void;
 }) {
  const [name, setName] = useState('');
+ const [description, setDescription] = useState('');
  const [price, setPrice] = useState('');
  const [category, setCategory] = useState('');
  const [serviceCategoryId, setServiceCategoryId] = useState('');
@@ -138,6 +143,7 @@ function NewServiceForm({
  '/services',
  {
  name: name.trim(),
+ description: description.trim() || null,
  price: priceValue,
  category: category.trim() || null,
  service_category_id: serviceCategoryId ? Number(serviceCategoryId) : null,
@@ -162,6 +168,17 @@ function NewServiceForm({
  <div className="grid gap-1.5">
  <Label htmlFor="new-service-price">Price</Label>
  <Input id="new-service-price" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} required/>
+ </div>
+ <div className="grid gap-1.5 sm:col-span-2">
+ <Label htmlFor="new-service-description">Description <span className="font-normal text-muted-foreground">(optional)</span></Label>
+ <Textarea
+ id="new-service-description"
+ value={description}
+ onChange={(e) => setDescription(e.target.value)}
+ placeholder="What's included in this service?"
+ maxLength={2000}
+ className="min-h-[60px] text-sm"
+ />
  </div>
  <div className="grid gap-1.5">
  <Label htmlFor="new-service-category">Category <span className="font-normal text-muted-foreground">(optional)</span></Label>
@@ -207,6 +224,13 @@ function ServiceCard({ item, showServiceCategory }: { item: ServiceItemRow; show
  placeholder="Service name"
  className="text-sm"
  />
+ <Textarea
+ value={editor.description}
+ onChange={(e) => editor.setDescription(e.target.value)}
+ placeholder="Description (optional)"
+ maxLength={2000}
+ className="min-h-[60px] text-sm"
+ />
  <div className="flex items-center gap-2">
  <Input
  type="number"
@@ -239,6 +263,7 @@ function ServiceCard({ item, showServiceCategory }: { item: ServiceItemRow; show
  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inactive</span>
  )}
  </div>
+ {item.description && <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>}
  {showServiceCategory && <div className="mt-0.5 text-xs text-muted-foreground">{item.service_category_label}</div>}
  </div>
  <div className="flex items-center gap-1">
@@ -261,6 +286,13 @@ function ServiceTableRow({ item, showServiceCategory }: { item: ServiceItemRow; 
  <tr className="bg-accent/30">
  <td className="px-4 py-3">
  <Input value={editor.name} onChange={(e) => editor.setName(e.target.value)} className="h-8 text-sm"/>
+ <Textarea
+ value={editor.description}
+ onChange={(e) => editor.setDescription(e.target.value)}
+ placeholder="Description (optional)"
+ maxLength={2000}
+ className="mt-1.5 min-h-[50px] text-sm"
+ />
  {editor.error && <p className="mt-1 text-xs text-destructive">{editor.error}</p>}
  </td>
  {showServiceCategory && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.service_category_label}</td>}
@@ -288,13 +320,14 @@ function ServiceTableRow({ item, showServiceCategory }: { item: ServiceItemRow; 
 
  return (
  <tr className={`transition-colors hover:bg-accent/40 ${!item.is_active ? 'opacity-60' : ''}`}>
- <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">
+ <td className="px-4 py-3 font-medium text-foreground">
  <div className="flex items-center gap-1.5">
  {item.name}
  {!item.is_active && (
  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inactive</span>
  )}
  </div>
+ {item.description && <p className="mt-0.5 text-xs font-normal whitespace-normal text-muted-foreground">{item.description}</p>}
  </td>
  {showServiceCategory && <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{item.service_category_label}</td>}
  <td className="px-4 py-3 whitespace-nowrap">
